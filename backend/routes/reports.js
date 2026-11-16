@@ -1,28 +1,22 @@
+const express = require("express");
 const pool = require("../db");
+const { sendJson } = require("../lib/respond");
 
-function sendJson(res, statusCode, data) {
-  res.writeHead(statusCode, {
-    "Content-Type": "application/json"
-  });
-  res.end(JSON.stringify(data));
-}
+const router = express.Router();
 
-function getDateFilters(url) {
+function getDateFilters(query) {
   return {
-    startDate: url.searchParams.get("startDate"),
-    endDate: url.searchParams.get("endDate"),
-    paymentType: url.searchParams.get("paymentType"),
-    scope: url.searchParams.get("scope"),
-    enclosureId: url.searchParams.get("enclosureId")
+    startDate: query.startDate,
+    endDate: query.endDate,
+    paymentType: query.paymentType,
+    scope: query.scope,
+    enclosureId: query.enclosureId
   };
 }
+// GET /api/reports/enclosure-occupancy
+router.get("/enclosure-occupancy", async (req, res) => {
+  const filters = getDateFilters(req.query);
 
-async function handleReports(req, res, pathname) {
-  const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-  const filters = getDateFilters(url);
-
-  // GET /api/reports/enclosure-occupancy
-  if (req.method === "GET" && pathname === "/api/reports/enclosure-occupancy") {
     try {
       let sql = `SELECT * FROM v_enclosure_occupancy WHERE 1=1`;
       const params = [];
@@ -41,11 +35,11 @@ async function handleReports(req, res, pathname) {
         error: "Could not get enclosure occupancy report"
       });
     }
-  }
+});
+// GET /api/reports/product-sales?startDate=&endDate=&shopId=&productId=
+router.get("/product-sales", async (req, res) => {
+  const filters = getDateFilters(req.query);
 
-
-  // GET /api/reports/product-sales?startDate=&endDate=&shopId=&productId=
-  if (req.method === "GET" && pathname === "/api/reports/product-sales") {
     try {
       let sql = `
         SELECT
@@ -81,14 +75,14 @@ async function handleReports(req, res, pathname) {
           AND s.IsDeleted = 0
       `;
 
-      if (url.searchParams.get("shopId")) {
+      if (req.query.shopId) {
         sql += " AND p.ShopID = ?";
-        params.push(url.searchParams.get("shopId"));
+        params.push(req.query.shopId);
       }
 
-      if (url.searchParams.get("productId")) {
+      if (req.query.productId) {
         sql += " AND p.ProductID = ?";
-        params.push(url.searchParams.get("productId"));
+        params.push(req.query.productId);
       }
 
       sql += `
@@ -104,11 +98,11 @@ async function handleReports(req, res, pathname) {
         error: "Could not get product sales report"
       });
     }
-  }
+});
+// GET /api/reports/customer-spending?startDate=&endDate=&customerId=
+router.get("/customer-spending", async (req, res) => {
+  const filters = getDateFilters(req.query);
 
-
-  // GET /api/reports/customer-spending?startDate=&endDate=&customerId=
-  if (req.method === "GET" && pathname === "/api/reports/customer-spending") {
     try {
       let sql = `
         SELECT
@@ -134,7 +128,7 @@ async function handleReports(req, res, pathname) {
 
       sql += " WHERE c.IsDeleted = 0";
 
-      const customerId = url.searchParams.get("customerId");
+      const customerId = req.query.customerId;
 
       if (customerId) {
         sql += " AND c.CustomerID = ?";
@@ -154,21 +148,20 @@ async function handleReports(req, res, pathname) {
         error: "Could not get customer spending report"
       });
     }
-  }
+});
 
   // GET /api/reports/revenue?startDate=&endDate=&paymentType=&customerId=&shopId=&productId=&ticketType=
 
   // GET /api/reports/revenue/details
-  // Returns individual transactions with their ticket and product details.
-  if (
-    req.method === "GET" &&
-    pathname === "/api/reports/revenue/details"
-  ) {
+// Returns individual transactions with their ticket and product details.
+router.get("/revenue/details", async (req, res) => {
+  const filters = getDateFilters(req.query);
+
     try {
-      const customerId = url.searchParams.get("customerId");
-      const shopId = url.searchParams.get("shopId");
-      const productName = url.searchParams.get("productName");
-      const ticketType = url.searchParams.get("ticketType");
+      const customerId = req.query.customerId;
+      const shopId = req.query.shopId;
+      const productName = req.query.productName;
+      const ticketType = req.query.ticketType;
 
       // Get matching transactions.
       let sql = `
@@ -381,14 +374,15 @@ async function handleReports(req, res, pathname) {
         error: "Could not get detailed revenue report"
       });
     }
-  }
+});
 
-  if (req.method === "GET" && pathname === "/api/reports/revenue") {
+router.get("/revenue", async (req, res) => {
+  const filters = getDateFilters(req.query);
     try {
-      const customerId = url.searchParams.get("customerId");
-      const shopId = url.searchParams.get("shopId");
-      const productName = url.searchParams.get("productName");
-      const ticketType = url.searchParams.get("ticketType");
+      const customerId = req.query.customerId;
+      const shopId = req.query.shopId;
+      const productName = req.query.productName;
+      const ticketType = req.query.ticketType;
 
       // If a product is selected, count only that product.
       // If a ticket type is selected, count only that ticket type.
@@ -513,18 +507,17 @@ async function handleReports(req, res, pathname) {
       console.error(error.message);
       return sendJson(res, 500, { error: "Could not get revenue report" });
     }
-  }
-
-
-
+});
 
   // GET /api/reports/visitor-activity
-  // ?startDate=&endDate=&ticketType=&enclosureId=&habitatType=
-  if (req.method === "GET" && pathname === "/api/reports/visitor-activity") {
+// ?startDate=&endDate=&ticketType=&enclosureId=&habitatType=
+router.get("/visitor-activity", async (req, res) => {
+  const filters = getDateFilters(req.query);
+
     try {
-      const ticketType = url.searchParams.get("ticketType");
-      const enclosureId = url.searchParams.get("enclosureId");
-      const habitatType = url.searchParams.get("habitatType");
+      const ticketType = req.query.ticketType;
+      const enclosureId = req.query.enclosureId;
+      const habitatType = req.query.habitatType;
 
       // Ticket popularity
       let ticketSql = `
@@ -781,11 +774,11 @@ async function handleReports(req, res, pathname) {
         error: "Could not get visitor activity report"
       });
     }
-  }
+});
+// GET /api/reports/most-visited?startDate=&endDate=
+router.get("/most-visited", async (req, res) => {
+  const filters = getDateFilters(req.query);
 
-
-  // GET /api/reports/most-visited?startDate=&endDate=
-  if (req.method === "GET" && pathname === "/api/reports/most-visited") {
     try {
       let sql = `
         SELECT
@@ -825,18 +818,13 @@ async function handleReports(req, res, pathname) {
         error: "Could not get most-visited report"
       });
     }
-  }
+});
+// GET /api/reports/animal-population
+router.get("/animal-population", async (req, res) => {
+  const filters = getDateFilters(req.query);
 
-
-  // GET /api/reports/animal-population
-  if (req.method === "GET" && pathname === "/api/reports/animal-population") {
     try {
-      const searchParams = new URL(req.url, "http://localhost").searchParams;
-
-      const speciesId = searchParams.get("speciesId");
-      const enclosureId = searchParams.get("enclosureId");
-      const sex = searchParams.get("sex");
-      const healthStatus = searchParams.get("healthStatus");
+      const { speciesId, enclosureId, sex, healthStatus } = req.query;
 
       // Build shared filters using parameterized SQL.
       const filterConditions = [];
@@ -1056,9 +1044,5 @@ async function handleReports(req, res, pathname) {
         error: "Could not get animal population report"
       });
     }
-  }
-
-  return sendJson(res, 404, { error: "Report not found" });
-}
-
-module.exports = { handleReports };
+});
+module.exports = router;
