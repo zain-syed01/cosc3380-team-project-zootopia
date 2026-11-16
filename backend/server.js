@@ -1,6 +1,5 @@
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
+const { loadEnv } = require("./lib/env");
+loadEnv();
 
 const express = require("express");
 const cors = require("cors");
@@ -18,8 +17,7 @@ app.use(express.json());
 
 app.get("/api/health", async (req, res) => {
   try {
-    const connection = await pool.getConnection();
-    connection.release();
+    await pool.prisma.$queryRaw`SELECT 1`;
     return sendJson(res, 200, { message: "Database connected!" });
   } catch (error) {
     console.error(error.message);

@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Species {
+  SpeciesID           Int                @id @default(autoincrement())
+  CommonName          String             @db.VarChar(100)
+  ScientificName      String             @unique @db.VarChar(100)
+  Diet                String             @db.VarChar(50)
+  ConservationStatus  String             @db.VarChar(50)
+  AvgLifespan         Int?
+  IsDeleted           Int                @default(0) @db.TinyInt
+  animals             Animal[]
+  speciesEnclosures   SpeciesEnclosure[]
+
+  @@map("species")
+}
+
+model Enclosure {
+  EnclosureID             Int                     @id @default(autoincrement())
+  Name                    String                  @db.VarChar(100)
+  HabitatType             String                  @db.VarChar(50)
+  Capacity                Int
+  Location                String                  @db.VarChar(100)
+  Status                  String                  @db.VarChar(20)
+  IsDeleted               Int                     @default(0) @db.TinyInt
+  animals                 Animal[]
+  attractions             Attraction[]
+  employees               Employee[]
+  speciesEnclosures       SpeciesEnclosure[]
+  closures                ZooClosure[]
+  transactionEnclosures   TransactionEnclosure[]
+
+  @@map("enclosure")
+}
+
+model SpeciesEnclosure {
+  SpeciesID   Int
+  EnclosureID Int
+  species     Species   @relation(fields: [SpeciesID], references: [SpeciesID])
+  enclosure   Enclosure @relation(fields: [EnclosureID], references: [EnclosureID])
+
+  @@id([SpeciesID, EnclosureID])
+  @@map("species_enclosure")
+}
+
+model Animal {
+  AnimalID        Int       @id @default(autoincrement())
+  Name            String    @db.VarChar(100)
+  SpeciesID       Int
+  EnclosureID     Int
+  Sex             String    @db.VarChar(10)
+  DateOfBirth     DateTime? @db.Date
+  AcquisitionDate DateTime  @db.Date
+  IsSick          Int       @default(0) @db.TinyInt
+  IsDeleted       Int       @default(0) @db.TinyInt
+  species         Species   @relation(fields: [SpeciesID], references: [SpeciesID])
+  enclosure       Enclosure @relation(fields: [EnclosureID], references: [EnclosureID])
+  alerts          Alert[]
+
+  @@map("animal")
+}
+
+model Employee {
+  EmployeeID    Int            @id @default(autoincrement())
+  FirstName     String         @db.VarChar(50)
+  LastName      String         @db.VarChar(50)
+  HireDate      DateTime       @db.Date
+  PhoneNumber   String         @unique @db.VarChar(25)
+  EmailAddress  String         @unique @db.VarChar(100)
+  Salary        Decimal        @db.Decimal(10, 2)
+  SupervisorID  Int?
+  EnclosureID   Int?
+  IsDeleted     Int            @default(0) @db.TinyInt
+  supervisor    Employee?      @relation("EmployeeSupervision", fields: [SupervisorID], references: [EmployeeID])
+  supervisees   Employee[]     @relation("EmployeeSupervision")
+  enclosure     Enclosure?     @relation(fields: [EnclosureID], references: [EnclosureID])
+  user          User?
+  shops         EmployeeShop[]
+  attractions   Attraction[]
+  transactions  Transaction[]
+
+  @@map("employee")
+}
+
+model Customer {
+  CustomerID   Int           @id @default(autoincrement())
+  Email        String        @unique @db.VarChar(100)
+  IsDeleted    Int           @default(0) @db.TinyInt
+  user         User?
+  transactions Transaction[]
+
+  @@map("customer")
+}
+
+model User {
+  UserID     Int       @id @default(autoincrement())
+  Username   String    @unique @db.VarChar(100)
+  Password   String    @db.VarChar(255)
+  Role       String    @db.VarChar(20)
+  EmployeeID Int?      @unique
+  CustomerID Int?      @unique
+  IsDeleted  Int       @default(0) @db.TinyInt
+  employee   Employee? @relation(fields: [EmployeeID], references: [EmployeeID])
+  customer   Customer? @relation(fields: [CustomerID], references: [CustomerID])
+
+  @@map("users")
+}
+
+model Shop {
+  ShopID     Int            @id @default(autoincrement())
+  Name       String         @db.VarChar(100)
+  Location   String         @db.VarChar(100)
+  ShopType   String         @db.VarChar(20)
+  IsDeleted  Int            @default(0) @db.TinyInt
+  products   Product[]
+  employees  EmployeeShop[]
+  transactions Transaction[]
+
+  @@map("shop")
+}
+
+model EmployeeShop {
+  EmployeeID Int
+  ShopID     Int
+  employee   Employee @relation(fields: [EmployeeID], references: [EmployeeID])
+  shop       Shop     @relation(fields: [ShopID], references: [ShopID])
+
+  @@id([EmployeeID, ShopID])
+  @@map("employee_shop")
+}
+
+model Product {
+  ProductID       Int                  @id @default(autoincrement())
+  Name            String               @db.VarChar(100)
+  Price           Decimal              @db.Decimal(8, 2)
+  Category        String               @db.VarChar(50)
+  QuantityInStock Int
+  ShopID          Int
+  IsDeleted       Int                  @default(0) @db.TinyInt
+  shop            Shop                 @relation(fields: [ShopID], references: [ShopID])
+  alerts          Alert[]
+  saleLines       TransactionProduct[]
+
+  @@map("product")
+}
+
+model Attraction {
+  AttractionID     Int       @id @default(autoincrement())
+  Name             String    @db.VarChar(100)
+  Type             String    @db.VarChar(50)
+  Schedule         DateTime
+  DurationMinutes  Int?
+  EnclosureID      Int
+  HostEmployeeID   Int
+  IsDeleted        Int       @default(0) @db.TinyInt
+  enclosure        Enclosure @relation(fields: [EnclosureID], references: [EnclosureID])
+  host             Employee  @relation(fields: [HostEmployeeID], references: [EmployeeID])
+
+  @@map("attraction")
+}
+
+model ZooClosure {
+  ClosureID   Int        @id @default(autoincrement())
+  Date        DateTime   @db.Date
+  Reason      String     @db.VarChar(100)
+  Scope       String     @db.VarChar(20)
+  EnclosureID Int?
+  enclosure   Enclosure? @relation(fields: [EnclosureID], references: [EnclosureID])
+
+  @@map("zooclosure")
+}
+
+model Transaction {
+  TransactionID Int                    @id @default(autoincrement())
+  CustomerID    Int?
+  EmployeeID    Int?
+  ShopID        Int
+  Date          DateTime
+  PaymentType   String                 @db.VarChar(50)
+  ReceiptEmail  String?                @db.VarChar(100)
+  customer      Customer?              @relation(fields: [CustomerID], references: [CustomerID])
+  employee      Employee?              @relation(fields: [EmployeeID], references: [EmployeeID])
+  shop          Shop                   @relation(fields: [ShopID], references: [ShopID])
+  tickets       Ticket[]
+  products      TransactionProduct[]
+  enclosures    TransactionEnclosure[]
+
+  @@map("transaction")
+}
+
+model Ticket {
+  TicketID      Int         @id @default(autoincrement())
+  TransactionID Int
+  Type          String      @db.VarChar(20)
+  Quantity      Int         @default(1)
+  UnitPrice     Decimal     @db.Decimal(8, 2)
+  transaction   Transaction @relation(fields: [TransactionID], references: [TransactionID])
+
+  @@map("ticket")
+}
+
+model TransactionProduct {
+  TransactionID Int
+  ProductID     Int
+  Quantity      Int
+  UnitPrice     Decimal     @db.Decimal(8, 2)
+  transaction   Transaction @relation(fields: [TransactionID], references: [TransactionID])
+  product       Product     @relation(fields: [ProductID], references: [ProductID])
+
+  @@id([TransactionID, ProductID])
+  @@map("transactionproduct")
+}
+
+model TransactionEnclosure {
+  TransactionID Int
+  EnclosureID   Int
+  transaction   Transaction @relation(fields: [TransactionID], references: [TransactionID])
+  enclosure     Enclosure   @relation(fields: [EnclosureID], references: [EnclosureID])
+
+  @@id([TransactionID, EnclosureID])
+  @@map("transaction_enclosure")
+}
+
+model Alert {
+  AlertID   Int       @id @default(autoincrement())
+  AlertType String    @db.VarChar(30)
+  Message   String    @db.VarChar(255)
+  ProductID Int?
+  AnimalID  Int?
+  CreatedAt DateTime
+  IsRead    Int       @default(0) @db.TinyInt
+  product   Product?  @relation(fields: [ProductID], references: [ProductID])
+  animal    Animal?   @relation(fields: [AnimalID], references: [AnimalID])
+
+  @@map("alert")
+}
