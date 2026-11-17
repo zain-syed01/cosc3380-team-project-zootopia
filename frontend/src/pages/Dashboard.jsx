@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import DataTable from '../components/DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 // today's date as YYYY-MM-DD (local time)
 function todayString() {
@@ -41,9 +42,9 @@ function Dashboard() {
   async function loadCashier() {
     try {
       const [shopRes, prodRes, salesRes] = await Promise.all([
-        fetch('/api/employees/' + user.employeeId + '/shops'),
-        fetch('/api/products'),
-        fetch('/api/sales/today?employeeId=' + user.employeeId),
+        apiFetch('/api/employees/' + user.employeeId + '/shops'),
+        apiFetch('/api/products'),
+        apiFetch('/api/sales/today?employeeId=' + user.employeeId),
       ])
       const shops = shopRes.ok ? await shopRes.json() : []
       const products = prodRes.ok ? await prodRes.json() : []
@@ -66,11 +67,11 @@ function Dashboard() {
   async function loadKeeper() {
     try {
       const [empRes, aniRes, encRes, cloRes, attRes] = await Promise.all([
-        fetch('/api/employees/' + user.employeeId),
-        fetch('/api/animals'),
-        fetch('/api/enclosures'),
-        fetch('/api/closures'),
-        fetch('/api/attractions'),
+        apiFetch('/api/employees/' + user.employeeId),
+        apiFetch('/api/animals'),
+        apiFetch('/api/enclosures'),
+        apiFetch('/api/closures'),
+        apiFetch('/api/attractions'),
       ])
       const me = empRes.ok ? await empRes.json() : {}
       const animals = aniRes.ok ? await aniRes.json() : []
@@ -107,8 +108,8 @@ function Dashboard() {
     if (!isManager) return
     try {
       const [listRes, countRes] = await Promise.all([
-        fetch('/api/alerts'),
-        fetch('/api/alerts/unread-count'),
+        apiFetch('/api/alerts'),
+        apiFetch('/api/alerts/unread-count'),
       ])
       const list = await listRes.json()
       const count = await countRes.json()
@@ -122,10 +123,10 @@ function Dashboard() {
   async function loadStats() {
     try {
       const [a, p, e, rev] = await Promise.all([
-        fetch('/api/animals'),
-        fetch('/api/products'),
-        fetch('/api/enclosures'),
-        isManager ? fetch('/api/reports/revenue') : Promise.resolve(null),
+        apiFetch('/api/animals'),
+        apiFetch('/api/products'),
+        apiFetch('/api/enclosures'),
+        isManager ? apiFetch('/api/reports/revenue') : Promise.resolve(null),
       ])
       const animals = a.ok ? await a.json() : []
       const products = p.ok ? await p.json() : []
@@ -156,22 +157,22 @@ function Dashboard() {
   }, [])
 
   async function markRead(alertId) {
-    await fetch('/api/alerts/' + alertId + '/read', { method: 'PUT' })
+    await apiFetch('/api/alerts/' + alertId + '/read', { method: 'PUT' })
     loadAlerts()
   }
 
   async function markAllRead() {
-    await fetch('/api/alerts/read-all', { method: 'PUT' })
+    await apiFetch('/api/alerts/read-all', { method: 'PUT' })
     loadAlerts()
   }
   async function deleteAlert(alertId) {
-    await fetch('/api/alerts/' + alertId, { method: 'DELETE' })
+    await apiFetch('/api/alerts/' + alertId, { method: 'DELETE' })
     loadAlerts()
   }
 
   async function clearReadAlerts() {
     if (!window.confirm('Delete all read alerts? This cannot be undone.')) return
-    await fetch('/api/alerts/clear-read', { method: 'DELETE' })
+    await apiFetch('/api/alerts/clear-read', { method: 'DELETE' })
     loadAlerts()
   }
 

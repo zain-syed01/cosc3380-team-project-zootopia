@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import DataTable from '../components/DataTable.jsx'
 import { CONSERVATION_STATUSES } from '../options.js'
+import { apiFetch } from '../api.js'
 
 // species page: list + add / edit / delete
 // uses /api/species
@@ -34,7 +35,7 @@ function Species() {
   // get the species list from the backend
   async function loadSpecies() {
     try {
-      const response = await fetch('/api/species')
+      const response = await apiFetch('/api/species')
       const data = await response.json()
 
       if (!response.ok) {
@@ -89,7 +90,7 @@ function Species() {
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -120,7 +121,7 @@ function Species() {
   async function handleEdit(row) {
     try {
       // get the full species record
-      const response = await fetch('/api/species/' + row.SpeciesID)
+      const response = await apiFetch('/api/species/' + row.SpeciesID)
       const speciesData = await response.json()
 
       if (!response.ok) {
@@ -151,7 +152,7 @@ function Species() {
     if (!window.confirm('Delete ' + row.CommonName + '?')) return
 
     try {
-      const response = await fetch('/api/species/' + row.SpeciesID, {
+      const response = await apiFetch('/api/species/' + row.SpeciesID, {
         method: 'DELETE',
       })
 

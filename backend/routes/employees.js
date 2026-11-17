@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
+const { hashPassword, isZooStaffEmail } = require("../lib/password");
 
 const router = express.Router();
 
@@ -111,6 +112,21 @@ router.post("/", async (req, res) => {
       return sendJson(res, 400, { error: "Role must be Manager, Zookeeper, or Cashier" });
     }
 
+    const email = String(EmailAddress || "").trim().toLowerCase();
+    if (!isZooStaffEmail(email)) {
+      return sendJson(res, 400, { error: "Staff email must use the @zoo.com domain" });
+    }
+
+    const [customerClash] = await pool.query(
+      "SELECT CustomerID FROM customer WHERE Email = ? AND IsDeleted = 0",
+      [email]
+    );
+    if (customerClash.length > 0) {
+      return sendJson(res, 400, { error: "That email is already used by a customer account" });
+    }
+
+    const passwordHash = await hashPassword(Password);
+
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
@@ -123,7 +139,7 @@ router.post("/", async (req, res) => {
         LastName,
         HireDate,
         PhoneNumber,
-        EmailAddress,
+        email,
         Salary,
         SupervisorID || null,
         EnclosureID || null
@@ -134,7 +150,7 @@ router.post("/", async (req, res) => {
     await connection.query(
       `INSERT INTO users (Username, Password, Role, EmployeeID, CustomerID)
          VALUES (?, ?, ?, ?, NULL)`,
-      [Username, Password, Role, employeeId]
+      [Username, passwordHash, Role, employeeId]
     );
 
     if (Array.isArray(ShopIDs)) {
@@ -226,6 +242,19 @@ router.put("/:id", async (req, res) => {
       Role
     } = body;
 
+    const email = String(EmailAddress || "").trim().toLowerCase();
+    if (!isZooStaffEmail(email)) {
+      return sendJson(res, 400, { error: "Staff email must use the @zoo.com domain" });
+    }
+
+    const [customerClash] = await pool.query(
+      "SELECT CustomerID FROM customer WHERE Email = ? AND IsDeleted = 0",
+      [email]
+    );
+    if (customerClash.length > 0) {
+      return sendJson(res, 400, { error: "That email is already used by a customer account" });
+    }
+
     const [result] = await pool.query(
       `UPDATE employee
          SET FirstName = ?, LastName = ?, HireDate = ?, PhoneNumber = ?,
@@ -236,7 +265,7 @@ router.put("/:id", async (req, res) => {
         LastName,
         HireDate,
         PhoneNumber,
-        EmailAddress,
+        email,
         Salary,
         SupervisorID || null,
         EnclosureID || null,

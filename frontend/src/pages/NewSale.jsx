@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiFetch } from '../api.js'
 
 // in-person sale at a gift shop or food stand
 // no customer account is linked; the sale stores the shop, the cashier, the items,
@@ -21,7 +22,7 @@ function NewSale() {
     async function loadShops() {
       try {
         const url = isManager ? '/api/shops' : '/api/employees/' + user.employeeId + '/shops'
-        const response = await fetch(url)
+        const response = await apiFetch(url)
         const data = await response.json()
         if (!response.ok) {
           setMessage({ type: 'error', text: data.error || 'Could not load shops' })
@@ -42,7 +43,7 @@ function NewSale() {
       setProducts([])
       return
     }
-    const response = await fetch('/api/products?shopId=' + id)
+    const response = await apiFetch('/api/products?shopId=' + id)
     if (response.ok) setProducts(await response.json())
   }
 
@@ -83,7 +84,7 @@ function NewSale() {
     }
 
     try {
-      const response = await fetch('/api/sales', {
+      const response = await apiFetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

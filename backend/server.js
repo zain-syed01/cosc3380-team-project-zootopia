@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const pool = require("./db");
 const { sendJson } = require("./lib/respond");
+const { requireStaff } = require("./middleware/auth");
 
 const PORT = process.env.PORT || 3000;
 const DIST = path.join(__dirname, "..", "frontend", "dist");
@@ -25,20 +26,66 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-app.use("/api/animals", require("./routes/animals"));
-app.use("/api/enclosures", require("./routes/enclosures"));
-app.use("/api/species", require("./routes/species"));
-app.use("/api/shops", require("./routes/shops"));
-app.use("/api/products", require("./routes/products"));
-app.use("/api/attractions", require("./routes/attractions"));
-app.use("/api/closures", require("./routes/closures"));
-app.use("/api/reports", require("./routes/reports"));
+const animals = require("./routes/animals");
+const enclosures = require("./routes/enclosures");
+const species = require("./routes/species");
+const shops = require("./routes/shops");
+const products = require("./routes/products");
+const attractions = require("./routes/attractions");
+const closures = require("./routes/closures");
+const checkout = require("./routes/checkout");
+const employees = require("./routes/employees");
+
+function protectUnlessGet(roles) {
+  return (req, res, next) => {
+    if (req.method === "GET" || req.method === "HEAD") {
+      return next();
+    }
+    return requireStaff(roles)(req, res, next);
+  };
+}
+
+// Public GETs for the visitor site; mutating staff routes require a JWT.
+app.use("/api/animals", protectUnlessGet(["Manager", "Zookeeper", "Cashier"]), animals);
+app.use("/api/enclosures", (req, res, next) => {
+  if (req.method === "GET" || req.method === "HEAD") {
+    return next();
+  }
+  if (req.method === "POST" && req.path === "/reopen-all") {
+    return requireStaff(["Manager"])(req, res, next);
+  }
+  return requireStaff(["Manager", "Zookeeper"])(req, res, next);
+}, enclosures);
+app.use("/api/species", protectUnlessGet(["Manager"]), species);
+app.use("/api/shops", protectUnlessGet(["Manager"]), shops);
+app.use("/api/products", protectUnlessGet(["Manager", "Cashier"]), products);
+app.use("/api/attractions", protectUnlessGet(["Manager", "Zookeeper"]), attractions);
+app.use("/api/closures", protectUnlessGet(["Manager"]), closures);
+
+app.use("/api/reports", requireStaff(["Manager"]), require("./routes/reports"));
 app.use("/api", require("./routes/auth"));
-app.use("/api", require("./routes/checkout"));
+app.use("/api", (req, res, next) => {
+  if (req.method === "POST" && req.path === "/checkout") {
+    return next();
+  }
+  if (req.method === "POST" && req.path === "/sales") {
+    return requireStaff(["Manager", "Cashier"])(req, res, next);
+  }
+  if (req.method === "GET" && req.path === "/sales/today") {
+    return requireStaff(["Manager", "Cashier"])(req, res, next);
+  }
+  return next();
+}, checkout);
 app.use("/api", require("./routes/transactions"));
-app.use("/api/alerts", require("./routes/alerts"));
-app.use("/api/employees", require("./routes/employees"));
-app.use("/api/customers", require("./routes/customers"));
+app.use("/api/alerts", requireStaff(["Manager"]), require("./routes/alerts"));
+app.use("/api/employees", (req, res, next) => {
+  // cashiers/zookeepers may read their own employee record and shop list
+  if (req.method === "GET" && /^\/\d+(\/shops)?$/.test(req.path)) {
+    return requireStaff(["Manager", "Cashier", "Zookeeper"])(req, res, next);
+  }
+  return requireStaff(["Manager"])(req, res, next);
+}, employees);
+app.use("/api/customers", requireStaff(["Manager"]), require("./routes/customers"));
 
 function contentType(filePath) {
   const ext = path.extname(filePath).toLowerCase();

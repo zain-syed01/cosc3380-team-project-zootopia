@@ -95,16 +95,17 @@ INSERT INTO employee_shop (EmployeeID, ShopID) VALUES
 (5, 1),
 (5, 3);
 
+-- Demo password for all seeded accounts: pass123 (bcrypt hashed)
 INSERT INTO users (UserID, Username, Password, Role, EmployeeID, CustomerID) VALUES
-(1, 'morgan', 'pass123', 'Manager', 1, NULL),
-(2, 'alex', 'pass123', 'Zookeeper', 2, NULL),
-(3, 'quinn', 'pass123', 'Cashier', 3, NULL),
-(4, 'jamie', 'pass123', 'Zookeeper', 4, NULL),
-(5, 'casey', 'pass123', 'Cashier', 5, NULL),
-(6, 'ava', 'pass123', 'Customer', NULL, 1),
-(7, 'jordan', 'pass123', 'Customer', NULL, 2),
-(8, 'sam', 'pass123', 'Customer', NULL, 3),
-(9, 'riley', 'pass123', 'Customer', NULL, 4);
+(1, 'morgan', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Manager', 1, NULL),
+(2, 'alex', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Zookeeper', 2, NULL),
+(3, 'quinn', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Cashier', 3, NULL),
+(4, 'jamie', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Zookeeper', 4, NULL),
+(5, 'casey', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Cashier', 5, NULL),
+(6, 'ava', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Customer', NULL, 1),
+(7, 'jordan', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Customer', NULL, 2),
+(8, 'sam', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Customer', NULL, 3),
+(9, 'riley', '$2b$10$ln0e7K3JSgwg9CfBfXaDiOhz2eHHIecynPD5mu0DIHj2ccafuQwme', 'Customer', NULL, 4);
 
 -- free scheduled events included with admission; host = zookeeper (required)
 INSERT INTO attraction (AttractionID, Name, Type, Schedule, DurationMinutes, EnclosureID, HostEmployeeID) VALUES

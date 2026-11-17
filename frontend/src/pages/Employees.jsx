@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import DataTable from '../components/DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 const EMPTY_FORM = {
   FirstName: '',
@@ -36,7 +37,7 @@ function Employees() {
 
   async function load() {
     try {
-      const res = await fetch('/api/employees')
+      const res = await apiFetch('/api/employees')
       setRows(await res.json())
     } catch (err) {
       setMessage({ type: 'error', text: 'Could not load employees' })
@@ -46,8 +47,8 @@ function Employees() {
   useEffect(() => {
     async function loadDropdowns() {
       const [e, s] = await Promise.all([
-        fetch('/api/enclosures'),
-        fetch('/api/shops'),
+        apiFetch('/api/enclosures'),
+        apiFetch('/api/shops'),
       ])
       setEnclosures(await e.json())
       setShops(await s.json())
@@ -100,7 +101,7 @@ function Employees() {
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -112,7 +113,7 @@ function Employees() {
       }
 
       if (editingId) {
-        await fetch('/api/employees/' + editingId + '/shops', {
+        await apiFetch('/api/employees/' + editingId + '/shops', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ShopIDs: form.ShopIDs }),
@@ -131,8 +132,8 @@ function Employees() {
   async function handleEdit(row) {
     try {
       const [empRes, shopRes] = await Promise.all([
-        fetch('/api/employees/' + row.EmployeeID),
-        fetch('/api/employees/' + row.EmployeeID + '/shops'),
+        apiFetch('/api/employees/' + row.EmployeeID),
+        apiFetch('/api/employees/' + row.EmployeeID + '/shops'),
       ])
       const emp = await empRes.json()
       const assigned = await shopRes.json()
@@ -160,7 +161,7 @@ function Employees() {
   async function handleDelete(row) {
     if (!window.confirm('Delete ' + row.FirstName + ' ' + row.LastName + '?')) return
     try {
-      const response = await fetch('/api/employees/' + row.EmployeeID, { method: 'DELETE' })
+      const response = await apiFetch('/api/employees/' + row.EmployeeID, { method: 'DELETE' })
       const data = await response.json()
       if (!response.ok) {
         setMessage({ type: 'error', text: data.error })

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import ReportPage from '../components/ReportPage.jsx'
 import DataTable from '../components/DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 function FilterBar({ filters, setFilters, children }) {
   return (
@@ -114,8 +115,8 @@ export function AnimalPopulationReport() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/species').then((res) => res.json()),
-      fetch('/api/enclosures').then((res) => res.json()),
+      apiFetch('/api/species').then((res) => res.json()),
+      apiFetch('/api/enclosures').then((res) => res.json()),
     ])
       .then(([speciesData, enclosureData]) => {
         setSpecies(Array.isArray(speciesData) ? speciesData : [])
@@ -143,7 +144,7 @@ export function AnimalPopulationReport() {
         ? `/api/reports/animal-population?${query}`
         : '/api/reports/animal-population'
 
-      const response = await fetch(url)
+      const response = await apiFetch(url)
       const result = await response.json()
 
       if (!response.ok) {
@@ -368,7 +369,7 @@ export function VisitorActivityReport() {
   const [reportView, setReportView] = useState('both')
 
   useEffect(() => {
-    fetch('/api/enclosures')
+    apiFetch('/api/enclosures')
       .then((res) => res.json())
       .then((result) => {
         setEnclosures(Array.isArray(result) ? result : [])
@@ -393,7 +394,7 @@ export function VisitorActivityReport() {
         selectedFilters
       )
 
-      const response = await fetch(url)
+      const response = await apiFetch(url)
       const result = await response.json()
 
       if (!response.ok) {
@@ -769,7 +770,7 @@ export function OccupancyReport() {
   const [enclosures, setEnclosures] = useState([])
 
   useEffect(() => {
-    fetch('/api/enclosures')
+    apiFetch('/api/enclosures')
       .then((res) => res.json())
       .then((data) => setEnclosures(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Could not load enclosures:', err))
@@ -880,8 +881,8 @@ export function ProductSalesReport() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/shops').then((res) => res.json()),
-      fetch('/api/products').then((res) => res.json()),
+      apiFetch('/api/shops').then((res) => res.json()),
+      apiFetch('/api/products').then((res) => res.json()),
     ])
       .then(([shopData, productData]) => {
         setShops(Array.isArray(shopData) ? shopData : [])
@@ -987,17 +988,17 @@ export function RevenueReport() {
   const [shops, setShops] = useState([])
 
   useEffect(() => {
-    fetch('/api/customers')
+    apiFetch('/api/customers')
       .then((res) => res.json())
       .then((data) => setCustomers(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Could not load customers:', err))
 
-    fetch('/api/products')
+    apiFetch('/api/products')
       .then((res) => res.json())
       .then((data) => setProducts(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Could not load products:', err))
 
-    fetch('/api/shops')
+    apiFetch('/api/shops')
       .then((res) => res.json())
       .then((data) => setShops(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Could not load shops:', err))
