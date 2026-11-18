@@ -91,6 +91,7 @@ model Employee {
 model Customer {
   CustomerID   Int           @id @default(autoincrement())
   Email        String        @unique @db.VarChar(100)
+  ClerkUserId  String?       @unique @map("ClerkUserId") @db.VarChar(255)
   IsDeleted    Int           @default(0) @db.TinyInt
   user         User?
   transactions Transaction[]

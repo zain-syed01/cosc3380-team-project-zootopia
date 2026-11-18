@@ -64,7 +64,7 @@ function Login() {
 
         <button type="submit">Log in</button>
 
-        <p>Customer? <Link to="/signup">Sign in or create an account</Link></p>
+        <p>Customer? <Link to="/customer-login">Customer sign in</Link> or <Link to="/signup">create an account</Link></p>
         <p><Link to="/">← Back to Zootopia Zoo</Link></p>
       </form>
     </div>

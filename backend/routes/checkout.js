@@ -1,6 +1,8 @@
 const express = require("express");
+const { getAuth, requireAuth } = require("@clerk/express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
+const { ensureCustomerForClerk } = require("../lib/customerAuth");
 
 const router = express.Router();
 
@@ -135,19 +137,17 @@ async function rollbackQuietly(connection) {
 }
 
 // POST /checkout
-router.post("/checkout", async (req, res) => {
+router.post("/checkout", requireAuth(), async (req, res) => {
   let connection;
 
   try {
     const body = req.body;
-    const { customerId } = body;
     const productList = Array.isArray(body.products) ? body.products : [];
     const enclosureIds = Array.isArray(body.enclosureIds) ? body.enclosureIds : [];
     const tickets = Array.isArray(body.tickets) ? body.tickets : [];
 
-    if (!customerId) {
-      return sendJson(res, 400, { error: "Missing customerId" });
-    }
+    const customer = await ensureCustomerForClerk(getAuth(req));
+    const customerId = customer.customerId;
 
     if (tickets.length === 0 && productList.length === 0) {
       return sendJson(res, 400, {
@@ -163,15 +163,6 @@ router.post("/checkout", async (req, res) => {
 
     connection = await pool.getConnection();
     await connection.beginTransaction();
-
-    const [customerRows] = await connection.query(
-      "SELECT CustomerID FROM customer WHERE CustomerID = ? AND IsDeleted = 0",
-      [customerId]
-    );
-    if (customerRows.length === 0) {
-      await rollbackQuietly(connection);
-      return sendJson(res, 400, { error: "Customer not found" });
-    }
 
     const shopId = await getOnlineStoreId(connection);
 
@@ -210,10 +201,10 @@ router.post("/checkout", async (req, res) => {
   }
 });
 
-// GET /sales/today?employeeId=3
+// GET /sales/today
 router.get("/sales/today", async (req, res) => {
   try {
-    const employeeId = req.query.employeeId;
+    const employeeId = req.staff?.employeeId || req.query.employeeId;
     if (!employeeId) {
       return sendJson(res, 400, { error: "Missing employeeId" });
     }
@@ -243,7 +234,8 @@ router.post("/sales", async (req, res) => {
 
   try {
     const body = req.body;
-    const { employeeId, shopId, paymentType } = body;
+    const employeeId = req.staff?.employeeId || body.employeeId;
+    const { shopId, paymentType } = body;
     const productList = Array.isArray(body.products) ? body.products : [];
 
     const receiptEmail = (body.customerEmail || "").trim().toLowerCase() || null;

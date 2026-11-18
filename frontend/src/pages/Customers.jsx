@@ -8,8 +8,8 @@ import { apiFetch } from '../api.js'
 
 const COLUMNS = [
   { key: 'CustomerID', label: 'ID' },
-  { key: 'Username', label: 'Username' },
   { key: 'Email', label: 'Email' },
+  { key: 'ClerkUserId', label: 'Clerk user' },
   { key: 'TransactionCount', label: 'Purchases' },
   { key: 'LifetimeSpend', label: 'Lifetime spend', isMoney: true },
 ]
@@ -51,7 +51,7 @@ function Customers() {
     <div>
       <h2>Customers</h2>
       <p style={{ color: 'var(--muted)' }}>
-        Customers create their own accounts online. You can view them and deactivate accounts.
+        Customers sign up with Clerk using email and password. You can view them and deactivate accounts.
       </p>
       {message ? <p className={'message ' + message.type}>{message.text}</p> : null}
 

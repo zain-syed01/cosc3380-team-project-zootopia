@@ -5,6 +5,7 @@
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
+    "@clerk/express": "^2.1.93",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",

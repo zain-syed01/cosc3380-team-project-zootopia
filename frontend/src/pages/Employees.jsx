@@ -191,7 +191,12 @@ function Employees() {
         <label>Phone</label>
         <input name="PhoneNumber" value={form.PhoneNumber} onChange={handleChange} />
         <label>Email</label>
-        <input name="EmailAddress" value={form.EmailAddress} onChange={handleChange} />
+        <input
+          name="EmailAddress"
+          value={form.EmailAddress}
+          onChange={handleChange}
+          placeholder="name@zoo.com"
+        />
         <label>Salary</label>
         <input name="Salary" type="number" step="0.01" value={form.Salary} onChange={handleChange} />
         <label>Role</label>

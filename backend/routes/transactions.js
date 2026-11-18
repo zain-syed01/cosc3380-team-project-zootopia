@@ -1,6 +1,8 @@
 const express = require("express");
+const { getAuth, requireAuth } = require("@clerk/express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
+const { ensureCustomerForClerk } = require("../lib/customerAuth");
 
 const router = express.Router();
 
@@ -66,14 +68,27 @@ async function loadTransactionDetail(transactionId, customerId) {
   };
 }
 
-// GET /my/transactions
-router.get("/my/transactions", async (req, res) => {
+// GET /my/transactions/:id
+router.get("/my/transactions/:id", requireAuth(), async (req, res) => {
   try {
-    const customerId = req.query.customerId;
-
-    if (!customerId) {
-      return sendJson(res, 400, { error: "customerId is required" });
+    const customer = await ensureCustomerForClerk(getAuth(req));
+    const detail = await loadTransactionDetail(req.params.id, customer.customerId);
+    if (!detail) {
+      return sendJson(res, 404, { error: "Transaction not found" });
     }
+    return sendJson(res, 200, detail);
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, error.statusCode || 500, {
+      error: error.message || "Could not get transaction"
+    });
+  }
+});
+
+// GET /my/transactions
+router.get("/my/transactions", requireAuth(), async (req, res) => {
+  try {
+    const customer = await ensureCustomerForClerk(getAuth(req));
 
     const [transactions] = await pool.query(
       `SELECT
@@ -97,7 +112,7 @@ router.get("/my/transactions", async (req, res) => {
            ON vt.TransactionID = t.TransactionID
          WHERE t.CustomerID = ?
          ORDER BY t.Date DESC`,
-      [customerId]
+      [customer.customerId]
     );
 
     const result = transactions.map((row) => ({
@@ -113,27 +128,9 @@ router.get("/my/transactions", async (req, res) => {
     return sendJson(res, 200, result);
   } catch (error) {
     console.error(error.message);
-    return sendJson(res, 500, { error: "Could not get transactions" });
-  }
-});
-
-// GET /my/transactions/:id
-router.get("/my/transactions/:id", async (req, res) => {
-  const { id: detailId } = req.params;
-  try {
-    const customerId = req.query.customerId;
-    if (!customerId) {
-      return sendJson(res, 400, { error: "customerId is required" });
-    }
-
-    const detail = await loadTransactionDetail(detailId, customerId);
-    if (!detail) {
-      return sendJson(res, 404, { error: "Transaction not found" });
-    }
-    return sendJson(res, 200, detail);
-  } catch (error) {
-    console.error(error.message);
-    return sendJson(res, 500, { error: "Could not get transaction" });
+    return sendJson(res, error.statusCode || 500, {
+      error: error.message || "Could not get transactions"
+    });
   }
 });
 

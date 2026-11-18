@@ -1,12 +1,14 @@
 const express = require("express");
+const { getAuth, requireAuth } = require("@clerk/express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
-const { hashPassword, verifyPassword } = require("../lib/password");
+const { verifyPassword } = require("../lib/password");
 const { signStaffToken, STAFF_ROLES } = require("../middleware/auth");
+const { ensureCustomerForClerk } = require("../lib/customerAuth");
 
 const router = express.Router();
 
-// POST /login — staff dashboard login (customers use Clerk)
+// POST /login — staff dashboard login
 router.post("/login", async (req, res) => {
   try {
     const body = req.body;
@@ -18,14 +20,13 @@ router.post("/login", async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      `SELECT u.UserID, u.Username, u.Password, u.Role, u.EmployeeID, u.CustomerID, c.Email
+      `SELECT u.UserID, u.Username, u.Password, u.Role, u.EmployeeID, u.CustomerID
          FROM users u
-         LEFT JOIN customer c ON u.CustomerID = c.CustomerID
          LEFT JOIN employee e ON u.EmployeeID = e.EmployeeID
          WHERE u.Username = ?
            AND u.IsDeleted = 0
-           AND (u.CustomerID IS NULL OR c.IsDeleted = 0)
-           AND (u.EmployeeID IS NULL OR e.IsDeleted = 0)`,
+           AND u.EmployeeID IS NOT NULL
+           AND e.IsDeleted = 0`,
       [username]
     );
 
@@ -49,7 +50,6 @@ router.post("/login", async (req, res) => {
     return sendJson(res, 200, {
       token,
       username: user.Username,
-      email: user.Email || null,
       role: user.Role,
       employeeId: user.EmployeeID
     });
@@ -59,66 +59,31 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// POST /signup — legacy customer signup (replaced by Clerk in a follow-up)
-router.post("/signup", async (req, res) => {
+// POST /auth/clerk/sync — create/link a customer row for the Clerk user
+router.post("/auth/clerk/sync", requireAuth(), async (req, res) => {
   try {
-    const body = req.body;
-    const username = (body.username || "").trim();
-    const email = (body.email || "").trim().toLowerCase();
-    const password = body.password;
-
-    if (!username || !email || !password) {
-      return sendJson(res, 400, { error: "Username, email, and password required" });
-    }
-
-    const [existingCustomer] = await pool.query(
-      "SELECT CustomerID FROM customer WHERE Email = ?",
-      [email]
-    );
-    if (existingCustomer.length > 0) {
-      return sendJson(res, 400, { error: "An account with that email already exists" });
-    }
-
-    const [existingUser] = await pool.query(
-      "SELECT UserID FROM users WHERE Username = ?",
-      [username]
-    );
-    if (existingUser.length > 0) {
-      return sendJson(res, 400, { error: "That login is already taken" });
-    }
-
-    const [existingEmployee] = await pool.query(
-      "SELECT EmployeeID FROM employee WHERE EmailAddress = ?",
-      [email]
-    );
-    if (existingEmployee.length > 0) {
-      return sendJson(res, 403, {
-        error: "Staff should use the staff login page."
-      });
-    }
-
-    const passwordHash = await hashPassword(password);
-    const [customerResult] = await pool.query(
-      "INSERT INTO customer (Email) VALUES (?)",
-      [email]
-    );
-    const customerId = customerResult.insertId;
-
-    await pool.query(
-      `INSERT INTO users (Username, Password, Role, EmployeeID, CustomerID)
-         VALUES (?, ?, 'Customer', NULL, ?)`,
-      [username, passwordHash, customerId]
-    );
-
-    return sendJson(res, 201, {
-      username,
-      email,
-      role: "Customer",
-      customerId
-    });
+    const auth = getAuth(req);
+    const customer = await ensureCustomerForClerk(auth);
+    return sendJson(res, 200, customer);
   } catch (error) {
     console.error(error.message);
-    return sendJson(res, 500, { error: "Signup failed" });
+    return sendJson(res, error.statusCode || 500, {
+      error: error.message || "Could not sync customer account"
+    });
+  }
+});
+
+// GET /auth/clerk/me
+router.get("/auth/clerk/me", requireAuth(), async (req, res) => {
+  try {
+    const auth = getAuth(req);
+    const customer = await ensureCustomerForClerk(auth);
+    return sendJson(res, 200, customer);
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, error.statusCode || 500, {
+      error: error.message || "Could not load customer account"
+    });
   }
 });
 
