@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { getLoggedInCustomer } from '../customerAuth.js'
+import { useAuth } from '@clerk/react'
+import { customerFetch, getLoggedInCustomer } from '../customerAuth.js'
 
 // online merch store: browse the online store's products, add to a cart, pay by card
 // the cart only lives on this page; nothing is saved until checkout
 function OnlineShop() {
   const customer = getLoggedInCustomer()
+  const { getToken } = useAuth()
   const navigate = useNavigate()
 
   const [products, setProducts] = useState([])
@@ -71,17 +73,19 @@ function OnlineShop() {
     }
 
     try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerId: customer.customerId,
-          products: cartLines.map((line) => ({
-            productId: line.productId,
-            quantity: line.quantity,
-          })),
-        }),
-      })
+      const response = await customerFetch(
+        '/api/checkout',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            products: cartLines.map((line) => ({
+              productId: line.productId,
+              quantity: line.quantity,
+            })),
+          }),
+        },
+        getToken
+      )
       const data = await response.json()
       if (!response.ok) {
         setMessage(data.error || 'Could not complete purchase')

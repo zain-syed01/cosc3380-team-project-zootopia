@@ -1,53 +1,87 @@
 # Zootopia Zoo
 
-COSC 3380 Section 17184, Team 1
+Full-stack zoo management and visitor app: staff dashboards for animals, enclosures, shops, and reports, plus customer ticketing and an online gift shop.
 
-Zoo database web app. Staff manage the animals, enclosures, employees, shops, etc. and make sales. Customers can sign up, buy tickets and order from the online shop.
+## Stack
 
-Live site: https://zootopia-frontend-dvcmbzc2dhcgc5ht.westcentralus-01.azurewebsites.net
+- **Frontend:** React (Vite) + React Router + Clerk (customer auth)
+- **Backend:** Express + Prisma + MySQL
+- **Auth:** Clerk email/password for customers; bcrypt + JWT for staff (`@zoo.com`)
 
-## Logins
+## Demo logins
 
-Password for all of them is `pass123`. Everyone uses the same Log in page.
+### Staff (app login at `/login`)
 
-- Manager: `morgan`
-- Zookeeper: `alex`
-- Cashier: `quinn`
-- Customer: `ava`
+Password for seeded staff accounts: `pass123`
 
-## Files
+| Role | Username | Email |
+|------|----------|-------|
+| Manager | `morgan` | `morgan@zoo.com` |
+| Zookeeper | `alex` | `alex@zoo.com` |
+| Cashier | `quinn` | `quinn@zoo.com` |
 
-- `database/` - the SQL files (tables, triggers, views, sample data)
-- `backend/` - Node API, each part of the app has its own file in `routes/`
-- `frontend/` - React app, pages are in `src/pages/`
-- `.env_example` - template for the database login info
+### Customers (Clerk at `/customer-login` or `/signup`)
 
-## Running it locally
+Customers sign up with **email + password** in Clerk (social login is optional and can stay off).
 
-You need Node.js and MySQL installed.
+- Use a throwaway/fake email for demos
+- Staff emails (`*@zoo.com`) cannot be used for customer accounts
+- If you already have seed customer emails in MySQL (`ava@email.com`, etc.), signing up in Clerk with the same email links that row
 
-1. Clone the repo
+## Setup
+
+### 1. Database
+
+In MySQL, run from `database/` in order:
+
+1. `final_zoo_db.sql`
+2. `triggers.sql`
+3. `views.sql`
+4. `seed_data.sql`
+
+If you already have an older database, also run:
+
+- `migration_staff_auth.sql` (hash plaintext `pass123` passwords)
+- `migration_clerk.sql` (add `customer.ClerkUserId`)
+
+### 2. Environment
+
+Copy `.env_example` to `backend/.env` and fill in MySQL + secrets:
 
 ```
-git clone https://github.com/RamRiv/cosc3380-team-project-zootopia.git
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password_here
+DB_NAME=final_zoo_db
+PORT=3000
+DB_SSL=false
+JWT_SECRET=change-me-to-a-long-random-string
+CLERK_SECRET_KEY=sk_test_...
 ```
 
-2. In MySQL Workbench, run these from the `database` folder in this order:
-   `final_zoo_db.sql`, `triggers.sql`, `views.sql`, `seed_data.sql`
+Create `frontend/.env` from `frontend/.env.example`:
 
-   (or import our SQL dump instead)
+```
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+```
 
-3. Copy `.env_example` into the `backend` folder, rename it to `.env` and put your MySQL password in it
+### 3. Clerk dashboard checklist
 
-4. Start the backend
+1. Create a Clerk application
+2. Enable **Email + password**
+3. Turn **off** email verification for local/demo use (or use real inboxes)
+4. Optionally disable Google/social providers
+5. Add allowed origins/redirects for `http://localhost:5173` and your deployed frontend URL
+6. Paste the publishable key into `frontend/.env` and the secret key into `backend/.env`
+
+### 4. Run locally
 
 ```
 cd backend
 npm install
-node server.js
+npm start
 ```
-
-5. In a second terminal, start the frontend
 
 ```
 cd frontend
@@ -55,6 +89,16 @@ npm install
 npm run dev
 ```
 
-6. Go to http://localhost:5173
+Open http://localhost:5173
 
-Both terminals need to stay open.
+## Project layout
+
+- `database/` — schema, triggers, views, seed data, migrations
+- `backend/` — Express API, Prisma schema, auth middleware
+- `frontend/` — React app (`src/pages/`, staff + customer UIs)
+
+## Notes
+
+- Staff API writes and reports require a staff JWT (`Authorization: Bearer …`)
+- Customer checkout and “my transactions” require a Clerk session
+- Public GETs (animals, enclosures, attractions, products) stay open for the visitor site

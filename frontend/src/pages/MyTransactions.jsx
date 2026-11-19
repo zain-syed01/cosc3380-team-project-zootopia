@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { getLoggedInCustomer } from '../customerAuth.js'
+import { useAuth } from '@clerk/react'
+import { customerFetch, getLoggedInCustomer } from '../customerAuth.js'
 
 function formatTransactionDate(value) {
   if (!value) return '—'
@@ -26,15 +27,17 @@ function formatTransactionDateTime(value) {
   })
 }
 
-function TransactionDetail({ customerId, transactionId }) {
+function TransactionDetail({ transactionId, getToken }) {
   const [order, setOrder] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     async function load() {
       try {
-        const response = await fetch(
-          '/api/my/transactions/' + transactionId + '?customerId=' + customerId
+        const response = await customerFetch(
+          '/api/my/transactions/' + transactionId,
+          {},
+          getToken
         )
         const data = await response.json()
         if (!response.ok) {
@@ -47,7 +50,7 @@ function TransactionDetail({ customerId, transactionId }) {
       }
     }
     load()
-  }, [customerId, transactionId])
+  }, [transactionId, getToken])
 
   if (error) return <p className="error">{error}</p>
   if (!order) return <p>Loading...</p>
@@ -144,16 +147,14 @@ function TransactionDetail({ customerId, transactionId }) {
   )
 }
 
-function TransactionList({ customer }) {
+function TransactionList({ customer, getToken }) {
   const [orders, setOrders] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     async function loadOrders() {
       try {
-        const response = await fetch(
-          '/api/my/transactions?customerId=' + customer.customerId
-        )
+        const response = await customerFetch('/api/my/transactions', {}, getToken)
         const data = await response.json()
         if (!response.ok) {
           setError(data.error || 'Could not load transactions')
@@ -165,12 +166,12 @@ function TransactionList({ customer }) {
       }
     }
     loadOrders()
-  }, [customer.customerId])
+  }, [getToken])
 
   return (
     <div>
       <h1>My Transactions</h1>
-      <p>Signed in as {customer.username}{customer.email ? ` · ${customer.email}` : ''}</p>
+      <p>Signed in as {customer?.email || 'customer'}</p>
       {error ? <p className="error">{error}</p> : null}
 
       {orders.length === 0 && !error ? (
@@ -178,7 +179,7 @@ function TransactionList({ customer }) {
           <p>No purchases yet.</p>
           <div className="form-buttons">
             <Link className="btn gold" to="/checkout">Buy tickets</Link>
-            <Link className="btn secondary" to="/shop">Visit the online shop</Link>
+            <Link className="btn secondary" to="/shop">Online shop</Link>
           </div>
         </div>
       ) : (
@@ -187,10 +188,10 @@ function TransactionList({ customer }) {
             <tr>
               <th>Date</th>
               <th>Tickets</th>
-              <th>Shop items</th>
+              <th>Items</th>
               <th>Payment</th>
               <th>Total</th>
-              <th>Details</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -217,11 +218,12 @@ function TransactionList({ customer }) {
 
 function MyTransactions() {
   const customer = getLoggedInCustomer()
+  const { getToken } = useAuth()
   const { id } = useParams()
   if (id) {
-    return <TransactionDetail customerId={customer.customerId} transactionId={id} />
+    return <TransactionDetail transactionId={id} getToken={getToken} />
   }
-  return <TransactionList customer={customer} />
+  return <TransactionList customer={customer} getToken={getToken} />
 }
 
 export default MyTransactions

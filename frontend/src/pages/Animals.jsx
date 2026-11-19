@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import DataTable from '../components/DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 // animals page: list + add / edit / delete
 // uses /api/animals, /api/species, /api/enclosures
@@ -38,7 +39,7 @@ function Animals() {
   // get the animal list from the backend
   async function loadAnimals() {
     try {
-      const response = await fetch('/api/animals')
+      const response = await apiFetch('/api/animals')
       const data = await response.json()
       setAnimals(
         data.map((a) => ({
@@ -55,9 +56,9 @@ function Animals() {
   useEffect(() => {
     // options for the species + enclosure dropdowns
     async function loadDropdowns() {
-      const speciesRes = await fetch('/api/species')
+      const speciesRes = await apiFetch('/api/species')
       setSpecies(await speciesRes.json())
-      const enclosureRes = await fetch('/api/enclosures')
+      const enclosureRes = await apiFetch('/api/enclosures')
       setEnclosures(await enclosureRes.json())
     }
 
@@ -93,7 +94,7 @@ function Animals() {
     const method = editingId ? 'PUT' : 'POST'
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -119,7 +120,7 @@ function Animals() {
   async function handleEdit(row) {
     try {
       // the list doesn't have the species/enclosure IDs, so get the full animal
-      const response = await fetch('/api/animals/' + row.AnimalID)
+      const response = await apiFetch('/api/animals/' + row.AnimalID)
       const animal = await response.json()
 
       setForm({
@@ -143,7 +144,7 @@ function Animals() {
     if (!window.confirm('Delete ' + row.AnimalName + '?')) return
 
     try {
-      const response = await fetch('/api/animals/' + row.AnimalID, { method: 'DELETE' })
+      const response = await apiFetch('/api/animals/' + row.AnimalID, { method: 'DELETE' })
       const data = await response.json()
 
       if (!response.ok) {

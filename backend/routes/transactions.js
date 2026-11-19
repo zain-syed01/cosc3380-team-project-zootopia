@@ -1,9 +1,10 @@
+const express = require("express");
+const { getAuth, requireAuth } = require("@clerk/express");
 const pool = require("../db");
+const { sendJson } = require("../lib/respond");
+const { ensureCustomerForClerk } = require("../lib/customerAuth");
 
-function sendJson(res, statusCode, data) {
-  res.writeHead(statusCode, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(data));
-}
+const router = express.Router();
 
 async function loadTransactionDetail(transactionId, customerId) {
   const [txRows] = await pool.query(
@@ -67,42 +68,30 @@ async function loadTransactionDetail(transactionId, customerId) {
   };
 }
 
-async function handleTransactions(req, res, pathname) {
-  const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-  const parts = pathname.split("/").filter(Boolean);
-  // /api/my/transactions or /api/my/transactions/:id
-  const detailId = parts[3];
-
-  // GET /api/my/transactions/:id?customerId=1
-  if (req.method === "GET" && detailId) {
-    try {
-      const customerId = url.searchParams.get("customerId");
-      if (!customerId) {
-        return sendJson(res, 400, { error: "customerId is required" });
-      }
-
-      const detail = await loadTransactionDetail(detailId, customerId);
-      if (!detail) {
-        return sendJson(res, 404, { error: "Transaction not found" });
-      }
-      return sendJson(res, 200, detail);
-    } catch (error) {
-      console.error(error.message);
-      return sendJson(res, 500, { error: "Could not get transaction" });
+// GET /my/transactions/:id
+router.get("/my/transactions/:id", requireAuth(), async (req, res) => {
+  try {
+    const customer = await ensureCustomerForClerk(getAuth(req));
+    const detail = await loadTransactionDetail(req.params.id, customer.customerId);
+    if (!detail) {
+      return sendJson(res, 404, { error: "Transaction not found" });
     }
+    return sendJson(res, 200, detail);
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, error.statusCode || 500, {
+      error: error.message || "Could not get transaction"
+    });
   }
+});
 
-  // GET /api/my/transactions?customerId=1
-  if (req.method === "GET" && pathname === "/api/my/transactions") {
-    try {
-      const customerId = url.searchParams.get("customerId");
+// GET /my/transactions
+router.get("/my/transactions", requireAuth(), async (req, res) => {
+  try {
+    const customer = await ensureCustomerForClerk(getAuth(req));
 
-      if (!customerId) {
-        return sendJson(res, 400, { error: "customerId is required" });
-      }
-
-      const [transactions] = await pool.query(
-        `SELECT
+    const [transactions] = await pool.query(
+      `SELECT
            t.TransactionID,
            t.CustomerID,
            t.Date,
@@ -123,27 +112,26 @@ async function handleTransactions(req, res, pathname) {
            ON vt.TransactionID = t.TransactionID
          WHERE t.CustomerID = ?
          ORDER BY t.Date DESC`,
-        [customerId]
-      );
+      [customer.customerId]
+    );
 
-      const result = transactions.map((row) => ({
-        transactionId: row.TransactionID,
-        customerId: row.CustomerID,
-        date: row.Date,
-        paymentType: row.PaymentType,
-        ticketCount: row.TicketCount,
-        productCount: row.ProductCount,
-        totalAmount: row.TotalAmount
-      }));
+    const result = transactions.map((row) => ({
+      transactionId: row.TransactionID,
+      customerId: row.CustomerID,
+      date: row.Date,
+      paymentType: row.PaymentType,
+      ticketCount: row.TicketCount,
+      productCount: row.ProductCount,
+      totalAmount: row.TotalAmount
+    }));
 
-      return sendJson(res, 200, result);
-    } catch (error) {
-      console.error(error.message);
-      return sendJson(res, 500, { error: "Could not get transactions" });
-    }
+    return sendJson(res, 200, result);
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, error.statusCode || 500, {
+      error: error.message || "Could not get transactions"
+    });
   }
+});
 
-  sendJson(res, 404, { error: "Route not found" });
-}
-
-module.exports = { handleTransactions };
+module.exports = router;

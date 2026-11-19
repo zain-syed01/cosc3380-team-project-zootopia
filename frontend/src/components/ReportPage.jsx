@@ -1,6 +1,7 @@
 
 import { useMemo, useState } from 'react'
 import DataTable from './DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 // Reports stay blank until Generate — filters are optional.
 function ReportPage({
@@ -44,7 +45,7 @@ function ReportPage({
       const query = params.toString()
       const reportUrl = query ? `${url}?${query}` : url
 
-      const response = await fetch(reportUrl)
+      const response = await apiFetch(reportUrl)
       const data = await response.json()
 
       if (!response.ok) {
@@ -56,7 +57,7 @@ function ReportPage({
         // Load detailed records when this report supports them.
         if (detailsUrl) {
           try {
-            const detailsResponse = await fetch(
+            const detailsResponse = await apiFetch(
               query ? `${detailsUrl}?${query}` : detailsUrl
             )
             const detailsData = await detailsResponse.json()

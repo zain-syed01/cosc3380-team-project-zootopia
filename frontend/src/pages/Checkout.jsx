@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { getLoggedInCustomer } from '../customerAuth.js'
+import { useAuth } from '@clerk/react'
+import { customerFetch, getLoggedInCustomer } from '../customerAuth.js'
 import { TICKETS, isPublicEnclosure } from '../zooInfo.js'
 
 // Online ticket checkout. Merchandise is purchased separately in the Online Shop.
@@ -8,6 +9,7 @@ const STEPS = ['Tickets', 'Visits', 'Pay']
 
 function Checkout() {
   const customer = getLoggedInCustomer()
+  const { getToken } = useAuth()
   const navigate = useNavigate()
 
   const [step, setStep] = useState(1)
@@ -85,18 +87,20 @@ function Checkout() {
       return
     }
     try {
-      const response = await fetch('/api/checkout', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    customerId: customer.customerId,
-    tickets: ticketLines.map((t) => ({
-      type: t.type,
-      quantity: t.quantity,
-    })),
-    enclosureIds: selectedEnclosures,
-  }),
-})
+      const response = await customerFetch(
+        '/api/checkout',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            tickets: ticketLines.map((t) => ({
+              type: t.type,
+              quantity: t.quantity,
+            })),
+            enclosureIds: selectedEnclosures,
+          }),
+        },
+        getToken
+      )
       const data = await response.json()
 
       if (!response.ok) {

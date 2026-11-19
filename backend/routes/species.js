@@ -1,49 +1,22 @@
+const express = require("express");
 const pool = require("../db");
+const { sendJson } = require("../lib/respond");
 
-function sendJson(res, statusCode, data) {
-  res.writeHead(statusCode, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(data));
-}
+const router = express.Router();
 
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk;
-    });
-    req.on("end", () => {
-      if (!body) {
-        resolve({});
-        return;
-      }
-      try {
-        resolve(JSON.parse(body));
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-}
+// GET /search?q=monkey
+router.get("/search", async (req, res) => {
+  try {
+    const searchTerm = req.query.q;
 
-async function handleSpecies(req, res, pathname) {
-  // /api/species or /api/species/1
-  const parts = pathname.split("/").filter(Boolean);
-  const id = parts[2];
-  const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+    if (!searchTerm || !searchTerm.trim()) {
+      return sendJson(res, 400, { error: "Search term is required" });
+    }
 
-  // GET /api/species/search?q=monkey
-  if (req.method === "GET" && id === "search") {
-    try {
-      const searchTerm = url.searchParams.get("q");
+    const term = `%${searchTerm.trim()}%`;
 
-      if (!searchTerm || !searchTerm.trim()) {
-        return sendJson(res, 400, { error: "Search term is required" });
-      }
-
-      const term = `%${searchTerm.trim()}%`;
-
-      const [rows] = await pool.query(
-        `SELECT
+    const [rows] = await pool.query(
+      `SELECT
            s.SpeciesID,
            s.CommonName,
            s.ScientificName,
@@ -74,116 +47,116 @@ async function handleSpecies(req, res, pathname) {
            s.Diet,
            s.ConservationStatus
          ORDER BY s.CommonName`,
-        [term, term, term, term]
-      );
+      [term, term, term, term]
+    );
 
-      return sendJson(res, 200, rows);
-    } catch (error) {
-      console.error(error.message);
-      return sendJson(res, 500, { error: "Could not search species" });
-    }
+    return sendJson(res, 200, rows);
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, 500, { error: "Could not search species" });
   }
+});
 
-  // GET /api/species
-  if (req.method === "GET" && !id) {
-    try {
-      const [rows] = await pool.query(
-        "SELECT * FROM species WHERE IsDeleted = 0"
-      );
-      return sendJson(res, 200, rows);
-    } catch (error) {
-      console.error(error.message);
-      return sendJson(res, 500, { error: "Could not get species" });
-    }
+// GET /
+router.get("/", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT * FROM species WHERE IsDeleted = 0"
+    );
+    return sendJson(res, 200, rows);
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, 500, { error: "Could not get species" });
   }
+});
 
-  // GET /api/species/:id
-  if (req.method === "GET" && id) {
-    try {
-      const [rows] = await pool.query(
-        "SELECT * FROM species WHERE SpeciesID = ? AND IsDeleted = 0",
-        [id]
-      );
+// GET /:id
+router.get("/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.query(
+      "SELECT * FROM species WHERE SpeciesID = ? AND IsDeleted = 0",
+      [id]
+    );
 
-      if (rows.length === 0) {
-        return sendJson(res, 404, { error: "Species not found" });
-      }
-
-      return sendJson(res, 200, rows[0]);
-    } catch (error) {
-      console.error(error.message);
-      return sendJson(res, 500, { error: "Could not get species" });
+    if (rows.length === 0) {
+      return sendJson(res, 404, { error: "Species not found" });
     }
+
+    return sendJson(res, 200, rows[0]);
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, 500, { error: "Could not get species" });
   }
+});
 
-  // POST /api/species
-  if (req.method === "POST" && !id) {
-    try {
-      const body = await readBody(req);
-      const { CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan } = body;
+// POST /
+router.post("/", async (req, res) => {
+  try {
+    const body = req.body;
+    const { CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan } = body;
 
-      if (!CommonName || !ScientificName || !Diet || !ConservationStatus) {
-        return sendJson(res, 400, { error: "Missing required fields" });
-      }
+    if (!CommonName || !ScientificName || !Diet || !ConservationStatus) {
+      return sendJson(res, 400, { error: "Missing required fields" });
+    }
 
-      const [result] = await pool.query(
-        `INSERT INTO species (CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan)
+    const [result] = await pool.query(
+      `INSERT INTO species (CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan)
          VALUES (?, ?, ?, ?, ?)`,
-        [CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan || null]
-      );
+      [CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan || null]
+    );
 
-      return sendJson(res, 201, { SpeciesID: result.insertId });
-    } catch (error) {
-      console.error(error.message);
-      return sendJson(res, 400, { error: error.message });
-    }
+    return sendJson(res, 201, { SpeciesID: result.insertId });
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, 400, { error: error.message });
   }
+});
 
-  // PUT /api/species/:id
-  if (req.method === "PUT" && id) {
-    try {
-      const body = await readBody(req);
-      const { CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan } = body;
+// PUT /:id
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const body = req.body;
+    const { CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan } = body;
 
-      const [result] = await pool.query(
-        `UPDATE species
+    const [result] = await pool.query(
+      `UPDATE species
          SET CommonName = ?, ScientificName = ?, Diet = ?,
              ConservationStatus = ?, AvgLifespan = ?
          WHERE SpeciesID = ? AND IsDeleted = 0`,
-        [CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan || null, id]
-      );
+      [CommonName, ScientificName, Diet, ConservationStatus, AvgLifespan || null, id]
+    );
 
-      if (result.affectedRows === 0) {
-        return sendJson(res, 404, { error: "Species not found" });
-      }
-
-      return sendJson(res, 200, { message: "Species updated" });
-    } catch (error) {
-      console.error(error.message);
-      return sendJson(res, 400, { error: error.message });
+    if (result.affectedRows === 0) {
+      return sendJson(res, 404, { error: "Species not found" });
     }
+
+    return sendJson(res, 200, { message: "Species updated" });
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, 400, { error: error.message });
   }
+});
 
-  // DELETE /api/species/:id  (soft delete)
-  if (req.method === "DELETE" && id) {
-    try {
-      const [result] = await pool.query(
-        "UPDATE species SET IsDeleted = 1 WHERE SpeciesID = ? AND IsDeleted = 0",
-        [id]
-      );
+// DELETE /:id
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [result] = await pool.query(
+      "UPDATE species SET IsDeleted = 1 WHERE SpeciesID = ? AND IsDeleted = 0",
+      [id]
+    );
 
-      if (result.affectedRows === 0) {
-        return sendJson(res, 404, { error: "Species not found" });
-      }
-
-      return sendJson(res, 200, { message: "Species deleted" });
-    } catch (error) {
-      console.error(error.message);
-      return sendJson(res, 500, { error: "Could not delete species" });
+    if (result.affectedRows === 0) {
+      return sendJson(res, 404, { error: "Species not found" });
     }
+
+    return sendJson(res, 200, { message: "Species deleted" });
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, 500, { error: "Could not delete species" });
   }
+});
 
-  sendJson(res, 404, { error: "Route not found" });
-}
-
-module.exports = { handleSpecies };
+module.exports = router;

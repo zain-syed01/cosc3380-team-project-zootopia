@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import DataTable from '../components/DataTable.jsx'
 import { CATEGORIES_BY_SHOP_TYPE } from '../options.js'
+import { apiFetch } from '../api.js'
 
 // products page
 // manager: list + add / edit / delete every product
@@ -37,7 +38,7 @@ function Products() {
 
   async function loadProducts() {
     try {
-      const response = await fetch('/api/products')
+      const response = await apiFetch('/api/products')
       setProducts(await response.json())
     } catch (err) {
       setMessage({ type: 'error', text: 'Could not load products' })
@@ -49,7 +50,7 @@ function Products() {
     async function loadShops() {
       // cashiers only get the shops they're assigned to
       const url = isManager ? '/api/shops' : '/api/employees/' + user?.employeeId + '/shops'
-      const response = await fetch(url)
+      const response = await apiFetch(url)
       const data = await response.json()
       setShops(Array.isArray(data) ? data : [])
     }
@@ -99,7 +100,7 @@ function Products() {
     const method = editingId ? 'PUT' : 'POST'
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -137,7 +138,7 @@ function Products() {
     if (!window.confirm('Delete ' + row.Name + '?')) return
 
     try {
-      const response = await fetch('/api/products/' + row.ProductID, { method: 'DELETE' })
+      const response = await apiFetch('/api/products/' + row.ProductID, { method: 'DELETE' })
       const data = await response.json()
 
       if (!response.ok) {

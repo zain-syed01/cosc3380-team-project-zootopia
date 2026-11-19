@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import DataTable from '../components/DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 const EMPTY_FORM = {
   Name: '',
@@ -31,9 +32,9 @@ function Attractions() {
   async function load() {
     try {
       const [aRes, eRes, empRes] = await Promise.all([
-        fetch('/api/attractions'),
-        fetch('/api/enclosures'),
-        fetch('/api/employees'),
+        apiFetch('/api/attractions'),
+        apiFetch('/api/enclosures'),
+        apiFetch('/api/employees'),
       ])
       const attractions = await aRes.json()
       const encs = await eRes.json()
@@ -73,7 +74,7 @@ function Attractions() {
     const schedule = form.Schedule.length === 16 ? form.Schedule.replace('T', ' ') + ':00' : form.Schedule
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, Schedule: schedule }),
@@ -108,7 +109,7 @@ function Attractions() {
   async function handleDelete(row) {
     if (!window.confirm('Delete ' + row.Name + '?')) return
     try {
-      const response = await fetch('/api/attractions/' + row.AttractionID, { method: 'DELETE' })
+      const response = await apiFetch('/api/attractions/' + row.AttractionID, { method: 'DELETE' })
       const data = await response.json()
       if (!response.ok) {
         setMessage({ type: 'error', text: data.error })

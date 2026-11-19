@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import DataTable from '../components/DataTable.jsx'
 import { HABITAT_TYPES, LOCATIONS } from '../options.js'
+import { apiFetch } from '../api.js'
 
 const EMPTY_FORM = {
   Name: '',
@@ -38,7 +39,7 @@ function EnclosureDetail({ isManager }) {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/enclosures/' + id + '/animals')
+        const res = await apiFetch('/api/enclosures/' + id + '/animals')
         const data = await res.json()
         if (!res.ok) {
           setError(data.error || 'Could not load enclosure')
@@ -118,7 +119,7 @@ function EnclosureList({ isManager }) {
 
   async function load() {
     try {
-      const res = await fetch('/api/enclosures')
+      const res = await apiFetch('/api/enclosures')
       setRows(await res.json())
     } catch (err) {
       setMessage({ type: 'error', text: 'Could not load enclosures' })
@@ -144,7 +145,7 @@ function EnclosureList({ isManager }) {
     const method = editingId ? 'PUT' : 'POST'
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -178,7 +179,7 @@ function EnclosureList({ isManager }) {
   async function handleDelete(row) {
     if (!window.confirm('Delete ' + row.Name + '?')) return
     try {
-      const response = await fetch('/api/enclosures/' + row.EnclosureID, { method: 'DELETE' })
+      const response = await apiFetch('/api/enclosures/' + row.EnclosureID, { method: 'DELETE' })
       const data = await response.json()
       if (!response.ok) {
         setMessage({ type: 'error', text: data.error })
@@ -193,7 +194,7 @@ function EnclosureList({ isManager }) {
 
   async function reopenAll() {
     try {
-      const response = await fetch('/api/enclosures/reopen-all', { method: 'POST' })
+      const response = await apiFetch('/api/enclosures/reopen-all', { method: 'POST' })
       const data = await response.json()
       if (!response.ok) {
         setMessage({ type: 'error', text: data.error })

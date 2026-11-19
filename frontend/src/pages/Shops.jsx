@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import DataTable from '../components/DataTable.jsx'
 import { LOCATIONS } from '../options.js'
+import { apiFetch } from '../api.js'
 
 // manager page: add / edit / remove gift shops and food stands
 // removing a shop is a soft delete (IsDeleted = 1) so past sales stay in reports
@@ -27,7 +28,7 @@ function Shops() {
 
   async function loadShops() {
     try {
-      const response = await fetch('/api/shops')
+      const response = await apiFetch('/api/shops')
       setShops(await response.json())
     } catch (err) {
       setMessage({ type: 'error', text: 'Could not load shops' })
@@ -57,7 +58,7 @@ function Shops() {
     const method = editingId ? 'PUT' : 'POST'
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -85,7 +86,7 @@ function Shops() {
   async function handleDelete(row) {
     if (!window.confirm('Remove ' + row.Name + '? Its products will be hidden too.')) return
     try {
-      const response = await fetch('/api/shops/' + row.ShopID, { method: 'DELETE' })
+      const response = await apiFetch('/api/shops/' + row.ShopID, { method: 'DELETE' })
       const data = await response.json()
       if (!response.ok) {
         setMessage({ type: 'error', text: data.error })

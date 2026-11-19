@@ -1,18 +1,77 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate, Navigate } from 'react-router'
-import { getLoggedInCustomer, logoutCustomer } from '../customerAuth.js'
+import { useAuth, useClerk, useUser } from '@clerk/react'
+import { logoutCustomer, syncCustomer } from '../customerAuth.js'
 
-// frame for customer pages: top bar + sidebar
 function CustomerLayout() {
   const navigate = useNavigate()
-  const customer = getLoggedInCustomer()
+  const { isLoaded, isSignedIn, getToken } = useAuth()
+  const { user } = useUser()
+  const { signOut } = useClerk()
+  const [ready, setReady] = useState(false)
+  const [error, setError] = useState('')
 
-  if (!customer) {
-    return <Navigate to="/login" replace />
+  useEffect(() => {
+    let cancelled = false
+
+    async function linkCustomer() {
+      if (!isLoaded) {
+        return
+      }
+      if (!isSignedIn) {
+        logoutCustomer()
+        if (!cancelled) {
+          setReady(true)
+        }
+        return
+      }
+
+      try {
+        await syncCustomer(getToken)
+        if (!cancelled) {
+          setError('')
+          setReady(true)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Could not link customer account')
+          setReady(true)
+        }
+      }
+    }
+
+    setReady(false)
+    linkCustomer()
+    return () => {
+      cancelled = true
+    }
+  }, [isLoaded, isSignedIn, getToken, user?.id])
+
+  async function handleLogout() {
+    logoutCustomer()
+    await signOut({ redirectUrl: '/' })
+    navigate('/', { replace: true })
   }
 
-  function handleLogout() {
-    logoutCustomer()
-    navigate('/', { replace: true })
+  if (!isLoaded || !ready) {
+    return <div className="login-page"><p>Loading customer session…</p></div>
+  }
+
+  if (!isSignedIn) {
+    return <Navigate to="/customer-login" replace />
+  }
+
+  if (error) {
+    return (
+      <div className="login-page">
+        <div className="login-box">
+          <h2>Account issue</h2>
+          <p className="error">{error}</p>
+          <p>Staff should use the staff login page.</p>
+          <button type="button" onClick={handleLogout}>Sign out</button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -20,8 +79,8 @@ function CustomerLayout() {
       <header className="topbar">
         <span className="logo">Zoo Customer</span>
         <div className="user">
-          <span>{customer.username}</span>
-          <button onClick={handleLogout}>Logout</button>
+          <span>{user?.primaryEmailAddress?.emailAddress || user?.username}</span>
+          <button type="button" onClick={handleLogout}>Logout</button>
         </div>
       </header>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import DataTable from '../components/DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 const EMPTY_FORM = {
   Date: '',
@@ -26,8 +27,8 @@ function Closures() {
   async function load() {
     try {
       const [cRes, eRes] = await Promise.all([
-        fetch('/api/closures'),
-        fetch('/api/enclosures'),
+        apiFetch('/api/closures'),
+        apiFetch('/api/enclosures'),
       ])
       const closures = await cRes.json()
       const encs = await eRes.json()
@@ -75,7 +76,7 @@ function Closures() {
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -108,7 +109,7 @@ function Closures() {
   async function handleDelete(row) {
     if (!window.confirm('Delete this closure record?')) return
     try {
-      const response = await fetch('/api/closures/' + row.ClosureID, { method: 'DELETE' })
+      const response = await apiFetch('/api/closures/' + row.ClosureID, { method: 'DELETE' })
       const data = await response.json()
       if (!response.ok) {
         setMessage({ type: 'error', text: data.error })

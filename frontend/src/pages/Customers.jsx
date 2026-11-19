@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import DataTable from '../components/DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 // manager page: view customers and deactivate accounts
 // customers create their own accounts on the Sign up page, so there's no "add customer" here
@@ -7,8 +8,8 @@ import DataTable from '../components/DataTable.jsx'
 
 const COLUMNS = [
   { key: 'CustomerID', label: 'ID' },
-  { key: 'Username', label: 'Username' },
   { key: 'Email', label: 'Email' },
+  { key: 'ClerkUserId', label: 'Clerk user' },
   { key: 'TransactionCount', label: 'Purchases' },
   { key: 'LifetimeSpend', label: 'Lifetime spend', isMoney: true },
 ]
@@ -19,7 +20,7 @@ function Customers() {
 
   async function load() {
     try {
-      const res = await fetch('/api/customers')
+      const res = await apiFetch('/api/customers')
       setRows(await res.json())
     } catch (err) {
       setMessage({ type: 'error', text: 'Could not load customers' })
@@ -33,7 +34,7 @@ function Customers() {
   async function handleDeactivate(row) {
     if (!window.confirm('Deactivate ' + row.Email + '? They will no longer be able to log in.')) return
     try {
-      const response = await fetch('/api/customers/' + row.CustomerID, { method: 'DELETE' })
+      const response = await apiFetch('/api/customers/' + row.CustomerID, { method: 'DELETE' })
       const data = await response.json()
       if (!response.ok) {
         setMessage({ type: 'error', text: data.error })
@@ -50,7 +51,7 @@ function Customers() {
     <div>
       <h2>Customers</h2>
       <p style={{ color: 'var(--muted)' }}>
-        Customers create their own accounts online. You can view them and deactivate accounts.
+        Customers sign up with Clerk using email and password. You can view them and deactivate accounts.
       </p>
       {message ? <p className={'message ' + message.type}>{message.text}</p> : null}
 

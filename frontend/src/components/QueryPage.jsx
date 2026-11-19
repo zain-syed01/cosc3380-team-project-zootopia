@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import DataTable from './DataTable.jsx'
+import { apiFetch } from '../api.js'
 
 // reusable search page: filter boxes on top, results table below
 // fields: the filter boxes, like [{ name: 'q', label: 'Search' }]
@@ -29,7 +30,7 @@ function QueryPage({ title, description, url, fields, columns, rowKey }) {
     }
 
     try {
-      const response = await fetch(url + '?' + params.toString())
+      const response = await apiFetch(url + '?' + params.toString())
       const data = await response.json()
 
       if (!response.ok) {
