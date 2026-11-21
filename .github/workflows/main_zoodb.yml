@@ -33,6 +33,11 @@ jobs:
           fi
           npm install
           npm run build --if-present
+          # Prove the Clerk key was baked into the Vite bundle before deploy
+          if ! grep -R -l "pk_test_" frontend/dist/assets/*.js >/dev/null 2>&1; then
+            echo "Frontend build is missing pk_test_ in dist JS. VITE_CLERK_PUBLISHABLE_KEY did not reach Vite."
+            exit 1
+          fi
           npm run test --if-present
 
       - name: Upload artifact for deployment job
