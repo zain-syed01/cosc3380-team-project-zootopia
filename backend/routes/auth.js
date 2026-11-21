@@ -1,9 +1,10 @@
 const express = require("express");
-const { getAuth, requireAuth } = require("@clerk/express");
+const { getAuth } = require("@clerk/express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
 const { verifyPassword } = require("../lib/password");
 const { signStaffToken, STAFF_ROLES } = require("../middleware/auth");
+const { requireClerkUser } = require("../middleware/clerkAuth");
 const { ensureCustomerForClerk } = require("../lib/customerAuth");
 
 const router = express.Router();
@@ -60,7 +61,7 @@ router.post("/login", async (req, res) => {
 });
 
 // POST /auth/clerk/sync — create/link a customer row for the Clerk user
-router.post("/auth/clerk/sync", requireAuth(), async (req, res) => {
+router.post("/auth/clerk/sync", requireClerkUser, async (req, res) => {
   try {
     const auth = getAuth(req);
     const customer = await ensureCustomerForClerk(auth);
@@ -74,7 +75,7 @@ router.post("/auth/clerk/sync", requireAuth(), async (req, res) => {
 });
 
 // GET /auth/clerk/me
-router.get("/auth/clerk/me", requireAuth(), async (req, res) => {
+router.get("/auth/clerk/me", requireClerkUser, async (req, res) => {
   try {
     const auth = getAuth(req);
     const customer = await ensureCustomerForClerk(auth);

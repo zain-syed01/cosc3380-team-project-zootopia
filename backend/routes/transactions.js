@@ -1,7 +1,8 @@
 const express = require("express");
-const { getAuth, requireAuth } = require("@clerk/express");
+const { getAuth } = require("@clerk/express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
+const { requireClerkUser } = require("../middleware/clerkAuth");
 const { ensureCustomerForClerk } = require("../lib/customerAuth");
 
 const router = express.Router();
@@ -69,7 +70,7 @@ async function loadTransactionDetail(transactionId, customerId) {
 }
 
 // GET /my/transactions/:id
-router.get("/my/transactions/:id", requireAuth(), async (req, res) => {
+router.get("/my/transactions/:id", requireClerkUser, async (req, res) => {
   try {
     const customer = await ensureCustomerForClerk(getAuth(req));
     const detail = await loadTransactionDetail(req.params.id, customer.customerId);
@@ -86,7 +87,7 @@ router.get("/my/transactions/:id", requireAuth(), async (req, res) => {
 });
 
 // GET /my/transactions
-router.get("/my/transactions", requireAuth(), async (req, res) => {
+router.get("/my/transactions", requireClerkUser, async (req, res) => {
   try {
     const customer = await ensureCustomerForClerk(getAuth(req));
 

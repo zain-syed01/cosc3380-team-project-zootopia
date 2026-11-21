@@ -1,7 +1,8 @@
 const express = require("express");
-const { getAuth, requireAuth } = require("@clerk/express");
+const { getAuth } = require("@clerk/express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
+const { requireClerkUser } = require("../middleware/clerkAuth");
 const { ensureCustomerForClerk } = require("../lib/customerAuth");
 
 const router = express.Router();
@@ -137,7 +138,7 @@ async function rollbackQuietly(connection) {
 }
 
 // POST /checkout
-router.post("/checkout", requireAuth(), async (req, res) => {
+router.post("/checkout", requireClerkUser, async (req, res) => {
   let connection;
 
   try {

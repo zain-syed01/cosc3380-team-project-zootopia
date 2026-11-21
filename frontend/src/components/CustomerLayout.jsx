@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useNavigate, Navigate } from 'react-router'
+import { NavLink, Outlet, Link } from 'react-router'
 import { useAuth, useClerk, useUser } from '@clerk/react'
 import { logoutCustomer, syncCustomer } from '../customerAuth.js'
 
 function CustomerLayout() {
-  const navigate = useNavigate()
   const { isLoaded, isSignedIn, getToken } = useAuth()
   const { user } = useUser()
   const { signOut } = useClerk()
@@ -21,6 +20,7 @@ function CustomerLayout() {
       if (!isSignedIn) {
         logoutCustomer()
         if (!cancelled) {
+          setError('')
           setReady(true)
         }
         return
@@ -50,15 +50,31 @@ function CustomerLayout() {
   async function handleLogout() {
     logoutCustomer()
     await signOut({ redirectUrl: '/' })
-    navigate('/', { replace: true })
   }
 
   if (!isLoaded || !ready) {
-    return <div className="login-page"><p>Loading customer session…</p></div>
+    return (
+      <div className="login-page">
+        <div className="login-box">
+          <h2>Loading…</h2>
+          <p>Finishing your customer sign in.</p>
+        </div>
+      </div>
+    )
   }
 
   if (!isSignedIn) {
-    return <Navigate to="/customer-login" replace />
+    return (
+      <div className="login-page">
+        <div className="login-box">
+          <h2>Customer area</h2>
+          <p>You need to sign in to buy tickets and use the online shop.</p>
+          <p><Link className="btn gold" to="/customer-login">Customer sign in</Link></p>
+          <p><Link to="/signup">Create an account</Link></p>
+          <p><Link to="/">← Back to Zootopia Zoo</Link></p>
+        </div>
+      </div>
+    )
   }
 
   if (error) {
