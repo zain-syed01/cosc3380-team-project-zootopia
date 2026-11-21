@@ -42,9 +42,6 @@ In MySQL, run from `database/` in order:
 3. `views.sql`
 4. `seed_data.sql`
 
-If you wipe and recreate the database, just re-run the four files above.
-`migration_remove_clerk.sql` is optional if an old DB still has a `ClerkUserId` column.
-
 ### 2. Environment
 
 Copy `.env_example` to `backend/.env` and fill in MySQL + JWT:
