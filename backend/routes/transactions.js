@@ -1,9 +1,7 @@
 const express = require("express");
-const { getAuth } = require("@clerk/express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
-const { requireClerkUser } = require("../middleware/clerkAuth");
-const { ensureCustomerForClerk } = require("../lib/customerAuth");
+const { requireCustomer } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -70,10 +68,9 @@ async function loadTransactionDetail(transactionId, customerId) {
 }
 
 // GET /my/transactions/:id
-router.get("/my/transactions/:id", requireClerkUser, async (req, res) => {
+router.get("/my/transactions/:id", requireCustomer, async (req, res) => {
   try {
-    const customer = await ensureCustomerForClerk(getAuth(req));
-    const detail = await loadTransactionDetail(req.params.id, customer.customerId);
+    const detail = await loadTransactionDetail(req.params.id, req.customer.customerId);
     if (!detail) {
       return sendJson(res, 404, { error: "Transaction not found" });
     }
@@ -87,10 +84,8 @@ router.get("/my/transactions/:id", requireClerkUser, async (req, res) => {
 });
 
 // GET /my/transactions
-router.get("/my/transactions", requireClerkUser, async (req, res) => {
+router.get("/my/transactions", requireCustomer, async (req, res) => {
   try {
-    const customer = await ensureCustomerForClerk(getAuth(req));
-
     const [transactions] = await pool.query(
       `SELECT
            t.TransactionID,
@@ -113,7 +108,7 @@ router.get("/my/transactions", requireClerkUser, async (req, res) => {
            ON vt.TransactionID = t.TransactionID
          WHERE t.CustomerID = ?
          ORDER BY t.Date DESC`,
-      [customer.customerId]
+      [req.customer.customerId]
     );
 
     const result = transactions.map((row) => ({

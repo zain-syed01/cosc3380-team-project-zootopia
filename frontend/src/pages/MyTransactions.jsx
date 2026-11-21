@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { useAuth } from '@clerk/react'
 import { customerFetch, getLoggedInCustomer } from '../customerAuth.js'
 
 function formatTransactionDate(value) {
@@ -27,18 +26,14 @@ function formatTransactionDateTime(value) {
   })
 }
 
-function TransactionDetail({ transactionId, getToken }) {
+function TransactionDetail({ transactionId }) {
   const [order, setOrder] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     async function load() {
       try {
-        const response = await customerFetch(
-          '/api/my/transactions/' + transactionId,
-          {},
-          getToken
-        )
+        const response = await customerFetch('/api/my/transactions/' + transactionId)
         const data = await response.json()
         if (!response.ok) {
           setError(data.error || 'Could not load transaction')
@@ -50,7 +45,7 @@ function TransactionDetail({ transactionId, getToken }) {
       }
     }
     load()
-  }, [transactionId, getToken])
+  }, [transactionId])
 
   if (error) return <p className="error">{error}</p>
   if (!order) return <p>Loading...</p>
@@ -85,25 +80,27 @@ function TransactionDetail({ transactionId, getToken }) {
 
       {order.tickets.length > 0 ? (
         <div className="page-card">
-          <h3>Your tickets</h3>
-          <p>Each line is a ticket type on this order — quantity shows how many you bought.</p>
-          {order.tickets.map((t) => (
-            <div key={t.TicketID} className="ticket-pass">
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                <div>
-                  <strong>{t.Type} ticket</strong>
-                  <div>Ticket ID #{t.TicketID}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div>× {t.Quantity}</div>
-                  <div>${(Number(t.UnitPrice) * t.Quantity).toFixed(2)}</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 8, color: 'var(--muted)', fontSize: 14 }}>
-                ${Number(t.UnitPrice).toFixed(2)} each
-              </div>
-            </div>
-          ))}
+          <h3>Tickets</h3>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Qty</th>
+                <th>Unit</th>
+                <th>Line</th>
+              </tr>
+            </thead>
+            <tbody>
+              {order.tickets.map((t) => (
+                <tr key={t.TicketID}>
+                  <td>{t.Type}</td>
+                  <td>{t.Quantity}</td>
+                  <td>${Number(t.UnitPrice).toFixed(2)}</td>
+                  <td>${(Number(t.UnitPrice) * t.Quantity).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : null}
 
@@ -113,10 +110,10 @@ function TransactionDetail({ transactionId, getToken }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Product</th>
+                <th>Item</th>
                 <th>Qty</th>
                 <th>Unit</th>
-                <th>Line total</th>
+                <th>Line</th>
               </tr>
             </thead>
             <tbody>
@@ -135,7 +132,7 @@ function TransactionDetail({ transactionId, getToken }) {
 
       {order.enclosures.length > 0 ? (
         <div className="page-card">
-          <h3>Enclosures visited</h3>
+          <h3>Planned visits</h3>
           <ul>
             {order.enclosures.map((e) => (
               <li key={e.EnclosureID}>{e.EnclosureName}</li>
@@ -147,14 +144,14 @@ function TransactionDetail({ transactionId, getToken }) {
   )
 }
 
-function TransactionList({ customer, getToken }) {
+function TransactionList({ customer }) {
   const [orders, setOrders] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     async function loadOrders() {
       try {
-        const response = await customerFetch('/api/my/transactions', {}, getToken)
+        const response = await customerFetch('/api/my/transactions')
         const data = await response.json()
         if (!response.ok) {
           setError(data.error || 'Could not load transactions')
@@ -166,12 +163,12 @@ function TransactionList({ customer, getToken }) {
       }
     }
     loadOrders()
-  }, [getToken])
+  }, [])
 
   return (
     <div>
       <h1>My Transactions</h1>
-      <p>Signed in as {customer?.email || 'customer'}</p>
+      <p>Signed in as {customer?.username || customer?.email || 'customer'}</p>
       {error ? <p className="error">{error}</p> : null}
 
       {orders.length === 0 && !error ? (
@@ -218,12 +215,11 @@ function TransactionList({ customer, getToken }) {
 
 function MyTransactions() {
   const customer = getLoggedInCustomer()
-  const { getToken } = useAuth()
   const { id } = useParams()
   if (id) {
-    return <TransactionDetail transactionId={id} getToken={getToken} />
+    return <TransactionDetail transactionId={id} />
   }
-  return <TransactionList customer={customer} getToken={getToken} />
+  return <TransactionList customer={customer} />
 }
 
 export default MyTransactions

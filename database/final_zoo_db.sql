@@ -93,11 +93,9 @@ DROP TABLE IF EXISTS `customer`;
 CREATE TABLE `customer` (
   `CustomerID` int NOT NULL AUTO_INCREMENT,
   `Email` varchar(100) NOT NULL,
-  `ClerkUserId` varchar(255) DEFAULT NULL,
   `IsDeleted` tinyint NOT NULL DEFAULT 0,
   PRIMARY KEY (`CustomerID`),
   UNIQUE KEY `Email` (`Email`),
-  UNIQUE KEY `customer_clerk_user` (`ClerkUserId`),
   CONSTRAINT `customer_chk_deleted` CHECK ((`IsDeleted` IN (0,1)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

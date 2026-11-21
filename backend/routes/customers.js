@@ -12,7 +12,6 @@ router.get("/", async (req, res) => {
       `SELECT
            c.CustomerID,
            c.Email,
-           c.ClerkUserId,
            COALESCE(vs.LifetimeSpend, 0) AS LifetimeSpend,
            COALESCE(vs.TransactionCount, 0) AS TransactionCount
          FROM customer c
@@ -32,7 +31,7 @@ router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const [rows] = await pool.query(
-      `SELECT c.CustomerID, c.Email, c.ClerkUserId
+      `SELECT c.CustomerID, c.Email
          FROM customer c
          WHERE c.CustomerID = ? AND c.IsDeleted = 0`,
       [id]
@@ -47,7 +46,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// POST / — managers can pre-create a customer email; the person still signs in with Clerk
+// POST / — managers can pre-create a customer email row
 router.post("/", async (req, res) => {
   try {
     const email = String(req.body.Email || "").trim().toLowerCase();

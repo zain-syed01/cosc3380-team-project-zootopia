@@ -20,6 +20,19 @@ function signStaffToken(user) {
   );
 }
 
+function signCustomerToken(user) {
+  return jwt.sign(
+    {
+      sub: user.UserID,
+      username: user.Username,
+      role: "Customer",
+      customerId: user.CustomerID
+    },
+    getJwtSecret(),
+    { expiresIn: "12h" }
+  );
+}
+
 function readBearerToken(req) {
   const header = req.headers.authorization || "";
   const [type, token] = header.split(" ");
@@ -57,8 +70,34 @@ function requireStaff(roles = STAFF_ROLES) {
   };
 }
 
+function requireCustomer(req, res, next) {
+  try {
+    const token = readBearerToken(req);
+    if (!token) {
+      return sendJson(res, 401, { error: "Customer login required" });
+    }
+
+    const payload = jwt.verify(token, getJwtSecret());
+    if (payload.role !== "Customer" || !payload.customerId) {
+      return sendJson(res, 403, { error: "Customer login required" });
+    }
+
+    req.customer = {
+      userId: payload.sub,
+      username: payload.username,
+      role: payload.role,
+      customerId: payload.customerId
+    };
+    return next();
+  } catch (error) {
+    return sendJson(res, 401, { error: "Invalid or expired customer session" });
+  }
+}
+
 module.exports = {
   STAFF_ROLES,
   signStaffToken,
-  requireStaff
+  signCustomerToken,
+  requireStaff,
+  requireCustomer
 };
