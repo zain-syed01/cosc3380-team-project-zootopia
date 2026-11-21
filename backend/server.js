@@ -5,7 +5,6 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
-const { clerkMiddleware } = require("@clerk/express");
 const pool = require("./db");
 const { sendJson } = require("./lib/respond");
 const { requireStaff } = require("./middleware/auth");
@@ -16,7 +15,6 @@ const DIST = path.join(__dirname, "..", "frontend", "dist");
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(clerkMiddleware());
 
 app.get("/api/health", async (req, res) => {
   try {

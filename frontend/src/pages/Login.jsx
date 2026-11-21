@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { loginCustomer } from '../customerAuth.js'
 
-// Staff login. Customers use the Clerk sign-in pages.
+// One login for staff and customers. Role from the API decides where you go.
 function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -31,13 +32,24 @@ function Login() {
       }
 
       setError('')
+
+      if (data.role === 'Customer') {
+        localStorage.removeItem('user')
+        loginCustomer(data)
+        navigate('/checkout')
+        return
+      }
+
       localStorage.removeItem('customer')
-      localStorage.setItem('user', JSON.stringify({
-        token: data.token,
-        username: data.username,
-        role: data.role,
-        employeeId: data.employeeId,
-      }))
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          token: data.token,
+          username: data.username,
+          role: data.role,
+          employeeId: data.employeeId,
+        })
+      )
       navigate('/dashboard')
     } catch (err) {
       setError('Could not connect to the server')
@@ -47,7 +59,7 @@ function Login() {
   return (
     <div className="login-page">
       <form className="login-box" onSubmit={handleSubmit}>
-        <h2>Staff Log In</h2>
+        <h2>Log In</h2>
 
         <label>Username</label>
         <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
@@ -64,8 +76,12 @@ function Login() {
 
         <button type="submit">Log in</button>
 
-        <p>Customer? <Link to="/customer-login">Customer sign in</Link> or <Link to="/signup">create an account</Link></p>
-        <p><Link to="/">← Back to Zootopia Zoo</Link></p>
+        <p>
+          Don&apos;t have an account? <Link to="/signup">Sign up</Link>
+        </p>
+        <p>
+          <Link to="/">← Back to Zootopia Zoo</Link>
+        </p>
       </form>
     </div>
   )

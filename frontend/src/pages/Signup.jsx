@@ -1,32 +1,98 @@
-import { useEffect } from 'react'
-import { Link } from 'react-router'
-
-// Hosted Clerk Account Portal (Development instance)
-const CLERK_SIGN_UP_URL =
-  import.meta.env.VITE_CLERK_SIGN_UP_URL ||
-  'https://settled-liger-9602.accounts.dev/sign-up'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { loginCustomer } from '../customerAuth.js'
 
 function Signup() {
-  useEffect(() => {
-    const redirectUrl = encodeURIComponent(`${window.location.origin}/checkout`)
-    window.location.replace(`${CLERK_SIGN_UP_URL}?redirect_url=${redirectUrl}`)
-  }, [])
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' })
+  const [error, setError] = useState('')
+  const navigate = useNavigate()
+
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+
+    const cleanUsername = form.username.trim()
+    const cleanEmail = form.email.trim()
+
+    if (!cleanUsername || !cleanEmail || !form.password) {
+      setError('Please fill in every field')
+      return
+    }
+
+    if (form.password !== form.confirm) {
+      setError('Passwords do not match')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: cleanUsername,
+          email: cleanEmail,
+          password: form.password,
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error)
+        return
+      }
+
+      setError('')
+      localStorage.removeItem('user')
+      loginCustomer(data)
+      navigate('/checkout')
+    } catch (err) {
+      setError('Could not connect to the server')
+    }
+  }
 
   return (
     <div className="login-page">
-      <div className="login-box">
-        <h2>Customer Sign Up</h2>
-        <p>Redirecting you to create an account…</p>
+      <form className="login-box" onSubmit={handleSubmit}>
+        <h2>Create an Account</h2>
+
+        <label>Username</label>
+        <input name="username" value={form.username} onChange={handleChange} autoComplete="username" />
+
+        <label>Email</label>
+        <input name="email" type="email" value={form.email} onChange={handleChange} autoComplete="email" />
+
+        <label>Password</label>
+        <input
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={handleChange}
+          autoComplete="new-password"
+        />
+
+        <label>Confirm password</label>
+        <input
+          name="confirm"
+          type="password"
+          value={form.confirm}
+          onChange={handleChange}
+          autoComplete="new-password"
+        />
+
+        {error ? <p className="error">{error}</p> : null}
+
+        <button type="submit">Sign up</button>
+
         <p>
-          If nothing happens,{' '}
-          <a href={`${CLERK_SIGN_UP_URL}?redirect_url=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/checkout` : '/checkout')}`}>
-            continue to Clerk sign up
-          </a>
-          .
+          Already have an account? <Link to="/login">Log in</Link>
         </p>
-        <p>Staff? <Link to="/login">Staff login</Link></p>
-        <p><Link to="/">← Back to Zootopia Zoo</Link></p>
-      </div>
+        <p>
+          <Link to="/">← Back to Zootopia Zoo</Link>
+        </p>
+      </form>
     </div>
   )
 }

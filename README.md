@@ -4,15 +4,15 @@ Full-stack zoo management and visitor app: staff dashboards for animals, enclosu
 
 ## Stack
 
-- **Frontend:** React (Vite) + React Router + Clerk (customer auth)
+- **Frontend:** React (Vite) + React Router
 - **Backend:** Express + Prisma + MySQL
-- **Auth:** Clerk email/password for customers; bcrypt + JWT for staff (`@zoo.com`)
+- **Auth:** bcrypt + JWT for staff and customers (no third-party auth)
 
 ## Demo logins
 
-### Staff (app login at `/login`)
+Password for all seeded accounts: `pass123`
 
-Password for seeded staff accounts: `pass123`
+### Staff (`/login`)
 
 | Role | Username | Email |
 |------|----------|-------|
@@ -20,13 +20,16 @@ Password for seeded staff accounts: `pass123`
 | Zookeeper | `alex` | `alex@zoo.com` |
 | Cashier | `quinn` | `quinn@zoo.com` |
 
-### Customers (Clerk at `/customer-login` or `/signup`)
+### Customers (`/login` or `/signup`)
 
-Customers sign up with **email + password** in Clerk (social login is optional and can stay off).
+| Username | Email |
+|----------|-------|
+| `ava` | `ava@email.com` |
+| `jordan` | `jordan@email.com` |
+| `sam` | `sam@email.com` |
+| `riley` | `riley@email.com` |
 
-- Use a throwaway/fake email for demos
-- Staff emails (`*@zoo.com`) cannot be used for customer accounts
-- If you already have seed customer emails in MySQL (`ava@email.com`, etc.), signing up in Clerk with the same email links that row
+New visitors can also create an account at `/signup` (username + email + password). Staff emails (`*@zoo.com`) cannot be used for customer accounts.
 
 ## Setup
 
@@ -39,14 +42,14 @@ In MySQL, run from `database/` in order:
 3. `views.sql`
 4. `seed_data.sql`
 
-If you already have an older database, also run:
+If you already have an older database that used Clerk, also run:
 
-- `migration_staff_auth.sql` (hash plaintext `pass123` passwords)
-- `migration_clerk.sql` (add `customer.ClerkUserId`)
+- `migration_restore_customer_users.sql` (re-add demo customer logins)
+- `migration_remove_clerk.sql` (optional: drop unused `customer.ClerkUserId`)
 
 ### 2. Environment
 
-Copy `.env_example` to `backend/.env` and fill in MySQL + secrets:
+Copy `.env_example` to `backend/.env` and fill in MySQL + JWT:
 
 ```
 DB_HOST=127.0.0.1
@@ -57,25 +60,11 @@ DB_NAME=final_zoo_db
 PORT=3000
 DB_SSL=false
 JWT_SECRET=change-me-to-a-long-random-string
-CLERK_SECRET_KEY=sk_test_...
 ```
 
-Create `frontend/.env` from `frontend/.env.example`:
+No frontend env file is required for auth.
 
-```
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-```
-
-### 3. Clerk dashboard checklist
-
-1. Create a Clerk application
-2. Enable **Email + password**
-3. Turn **off** email verification for local/demo use (or use real inboxes)
-4. Optionally disable Google/social providers
-5. Add allowed origins/redirects for `http://localhost:5173` and your deployed frontend URL
-6. Paste the publishable key into `frontend/.env` and the secret key into `backend/.env`
-
-### 4. Run locally
+### 3. Run locally
 
 ```
 cd backend
@@ -100,5 +89,5 @@ Open http://localhost:5173
 ## Notes
 
 - Staff API writes and reports require a staff JWT (`Authorization: Bearer …`)
-- Customer checkout and “my transactions” require a Clerk session
+- Customer checkout and “my transactions” require a customer JWT
 - Public GETs (animals, enclosures, attractions, products) stay open for the visitor site

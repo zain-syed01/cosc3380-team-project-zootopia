@@ -1,9 +1,7 @@
 const express = require("express");
-const { getAuth } = require("@clerk/express");
 const pool = require("../db");
 const { sendJson } = require("../lib/respond");
-const { requireClerkUser } = require("../middleware/clerkAuth");
-const { ensureCustomerForClerk } = require("../lib/customerAuth");
+const { requireCustomer } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -138,7 +136,7 @@ async function rollbackQuietly(connection) {
 }
 
 // POST /checkout
-router.post("/checkout", requireClerkUser, async (req, res) => {
+router.post("/checkout", requireCustomer, async (req, res) => {
   let connection;
 
   try {
@@ -146,9 +144,7 @@ router.post("/checkout", requireClerkUser, async (req, res) => {
     const productList = Array.isArray(body.products) ? body.products : [];
     const enclosureIds = Array.isArray(body.enclosureIds) ? body.enclosureIds : [];
     const tickets = Array.isArray(body.tickets) ? body.tickets : [];
-
-    const customer = await ensureCustomerForClerk(getAuth(req));
-    const customerId = customer.customerId;
+    const customerId = req.customer.customerId;
 
     if (tickets.length === 0 && productList.length === 0) {
       return sendJson(res, 400, {
